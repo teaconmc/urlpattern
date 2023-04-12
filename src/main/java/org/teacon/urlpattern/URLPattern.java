@@ -162,6 +162,25 @@ public final class URLPattern {
         }
     }
 
+    private static final List<String> ESCAPES;
+    private static final Options DEFAULT_OPTIONS;
+    private static final Map<String, String> SPECIAL_SCHEMES;
+
+    static {
+        DEFAULT_OPTIONS = new Options(false);
+        SPECIAL_SCHEMES = Map.of("file", "", "ftp", "21", "http", "80", "ws", "80", "https", "443", "wss", "443");
+        ESCAPES = List.of(IntStream.range(0, 256).mapToObj(i -> String.format("%%%X%X", i / 16, i % 16)).toArray(String[]::new));
+    }
+
+    private final Pattern protocol;
+    private final Pattern username;
+    private final Pattern password;
+    private final Pattern hostname;
+    private final Pattern port;
+    private final Pattern pathname;
+    private final Pattern search;
+    private final Pattern hash;
+
     private URLPattern(EnumMap<Component, String> processedInit, Options options) {
         var ignoreCase = options.getIgnoreCase();
 
@@ -201,25 +220,6 @@ public final class URLPattern {
         var hash = processedInit.getOrDefault(Component.HASH, "*");
         this.hash = regexp(hash, "", "", Part.ENCODING_HASH, false, new ArrayList<>());
     }
-
-    private static final List<String> ESCAPES;
-    private static final Options DEFAULT_OPTIONS;
-    private static final Map<String, String> SPECIAL_SCHEMES;
-
-    static {
-        DEFAULT_OPTIONS = new Options(false);
-        SPECIAL_SCHEMES = Map.of("file", "", "ftp", "21", "http", "80", "ws", "80", "https", "443", "wss", "443");
-        ESCAPES = List.of(IntStream.range(0, 256).mapToObj(i -> String.format("%%%X%X", i / 16, i % 16)).toArray(String[]::new));
-    }
-
-    private final Pattern protocol;
-    private final Pattern username;
-    private final Pattern password;
-    private final Pattern hostname;
-    private final Pattern port;
-    private final Pattern pathname;
-    private final Pattern search;
-    private final Pattern hash;
 
     private static Optional<?> match(URLPattern pattern, Map<? super Component, String> input) {
         var protocolMatcher = pattern.protocol.matcher(input.getOrDefault(Component.PROTOCOL, ""));
@@ -798,7 +798,7 @@ public final class URLPattern {
         if (states[Part.STATE_TOKEN_INCREMENT] > 0) {
             var stateTokenIndex = states[Part.STATE_TOKEN_INDEX];
             states[Part.STATE_TOKEN_INDEX] = stateTokenIndex + 1;
-            states[Part.STATE_CURSOR] += tokens[stateTokenIndex] & ~Part.TOKEN_MASK;
+            states[Part.STATE_CURSOR] += tokens[stateTokenIndex] & Part.STEP_MASK;
         }
     }
 
@@ -807,7 +807,7 @@ public final class URLPattern {
         var stateTokenIndex = states[Part.STATE_TOKEN_INDEX];
         var result = urlInput.substring(states[Part.STATE_COMPONENT_START_CURSOR], stateCursor);
         for (var i = 0; i < skip; ++i) {
-            stateCursor += tokens[stateTokenIndex] & ~Part.TOKEN_MASK;
+            stateCursor += tokens[stateTokenIndex] & Part.STEP_MASK;
             stateTokenIndex += 1;
         }
         states[Part.STATE_TOKEN_INCREMENT] = 0;
@@ -821,7 +821,7 @@ public final class URLPattern {
     private static boolean isFollowedByDoubleSlashes(String urlInput, int[] tokens, int[] states) {
         var stateCursor = states[Part.STATE_CURSOR];
         var stateTokenIndex = states[Part.STATE_TOKEN_INDEX];
-        var slashFirstCursor = stateCursor + (tokens[stateTokenIndex] & ~Part.TOKEN_MASK);
+        var slashFirstCursor = stateCursor + (tokens[stateTokenIndex] & Part.STEP_MASK);
         switch (tokens[stateTokenIndex + 1]) {
             case (Part.TOKEN_CHAR | 1):
             case (Part.TOKEN_INVALID_CHAR | 1):
@@ -837,7 +837,7 @@ public final class URLPattern {
             default:
                 return false;
         }
-        var slashSecondCursor = slashFirstCursor + (tokens[stateTokenIndex + 1] & ~Part.TOKEN_MASK);
+        var slashSecondCursor = slashFirstCursor + (tokens[stateTokenIndex + 1] & Part.STEP_MASK);
         switch (tokens[stateTokenIndex + 2]) {
             case (Part.TOKEN_CHAR | 1):
             case (Part.TOKEN_INVALID_CHAR | 1):
