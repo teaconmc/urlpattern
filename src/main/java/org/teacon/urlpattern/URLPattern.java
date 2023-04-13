@@ -886,13 +886,23 @@ public final class URLPattern {
             var baseUrl = parseUrlInput(input.get(ComponentType.BASE_URL), "");
             var baseUrlPathname = baseUrl.getOrDefault(ComponentType.PATHNAME, "");
             var baseUrlSpecialPort = Optional.ofNullable(baseUrl.get(ComponentType.PROTOCOL)).map(SPECIAL_SCHEMES::get);
-            if (baseUrlSpecialPort.isEmpty() && !baseUrlPathname.startsWith("/")) {
+            // The specification said that the baseURL should have an opaque path, but it doesn't seem to make sense.
+            // Maybe it should have been "the baseURL shouldn't have an opaque path", so the following implementation
+            // checks if the baseURL has an opaque path and continue if the result is false instead of true.
+            if (baseUrlSpecialPort.isPresent() || baseUrlPathname.startsWith("/")) {
                 var baseUrlLastSlash = baseUrlPathname.lastIndexOf('/');
                 if (baseUrlLastSlash >= 0) {
                     baseUrlOpaquePath = baseUrlPathname.substring(0, baseUrlLastSlash + 1);
                 }
             }
-            result.putAll(baseUrl);
+            result.put(ComponentType.PROTOCOL, baseUrl.getOrDefault(ComponentType.PROTOCOL, ""));
+            result.put(ComponentType.USERNAME, baseUrl.getOrDefault(ComponentType.USERNAME, ""));
+            result.put(ComponentType.PASSWORD, baseUrl.getOrDefault(ComponentType.PASSWORD, ""));
+            result.put(ComponentType.HOSTNAME, baseUrl.getOrDefault(ComponentType.HOSTNAME, ""));
+            result.put(ComponentType.PORT, baseUrl.getOrDefault(ComponentType.PORT, ""));
+            result.put(ComponentType.PATHNAME, baseUrl.getOrDefault(ComponentType.PATHNAME, ""));
+            result.put(ComponentType.SEARCH, baseUrl.getOrDefault(ComponentType.SEARCH, ""));
+            result.put(ComponentType.HASH, baseUrl.getOrDefault(ComponentType.HASH, ""));
         }
         if (input.containsKey(ComponentType.PROTOCOL)) {
             var protocol = input.get(ComponentType.PROTOCOL);
@@ -912,8 +922,9 @@ public final class URLPattern {
             result.put(ComponentType.HOSTNAME, isUrl ? encode(hostname, Part.ENCODING_HOSTNAME) : hostname);
         }
         var protocolPort = Optional.ofNullable(result.get(ComponentType.PROTOCOL)).map(SPECIAL_SCHEMES::get);
-        if (input.containsKey(ComponentType.PORT) || protocolPort.isPresent()) {
-            var port = input.getOrDefault(ComponentType.PORT, protocolPort.orElse(""));
+        if (input.containsKey(ComponentType.PORT)) {
+            var port = input.get(ComponentType.PORT);
+            port = protocolPort.filter(port::equals).isPresent() ? "" : port;
             result.put(ComponentType.PORT, isUrl ? encode(port, Part.ENCODING_PORT) : port);
         }
         if (input.containsKey(ComponentType.PATHNAME)) {
@@ -1011,6 +1022,7 @@ public final class URLPattern {
             var hash = uri.getRawFragment();
             var search = uri.getRawQuery();
             if (pathname != null) {
+                pathname = uri.getRawAuthority() == null || !pathname.isEmpty() ? pathname : "/";
                 result.put(ComponentType.PATHNAME, pathname);
             }
             if (hash != null) {
@@ -1281,7 +1293,10 @@ public final class URLPattern {
         while (true) {
             var charToken = expectToken(input, tokens, states, Part.TOKEN_CHAR);
             var nameToken = expectToken(input, tokens, states, Part.TOKEN_NAME);
-            var patternToken = expectToken(input, tokens, states, Part.TOKEN_PATTERN, Part.TOKEN_ASTERISK);
+            var patternToken = expectToken(input, tokens, states, Part.TOKEN_PATTERN);
+            if (nameToken.isEmpty() && patternToken.isEmpty()) {
+                patternToken = expectToken(input, tokens, states, Part.TOKEN_ASTERISK);
+            }
             if (!nameToken.isEmpty() || !patternToken.isEmpty()) {
                 var prefix = charToken;
                 if (!prefix.equals(prefixString)) {
@@ -1305,7 +1320,10 @@ public final class URLPattern {
             if (!openToken.isEmpty()) {
                 var prefix = expectText(input, tokens, states);
                 nameToken = expectToken(input, tokens, states, Part.TOKEN_NAME);
-                patternToken = expectToken(input, tokens, states, Part.TOKEN_PATTERN, Part.TOKEN_ASTERISK);
+                patternToken = expectToken(input, tokens, states, Part.TOKEN_PATTERN);
+                if (nameToken.isEmpty() && patternToken.isEmpty()) {
+                    patternToken = expectToken(input, tokens, states, Part.TOKEN_ASTERISK);
+                }
                 var suffix = expectText(input, tokens, states);
                 var closeToken = expectToken(input, tokens, states, Part.TOKEN_CLOSE);
                 failUnless(input, states[Part.STATE_CURSOR], !closeToken.isEmpty());
@@ -1578,14 +1596,20 @@ public final class URLPattern {
     }
 
     private static int expectModifier(String input, int[] tokens, int[] states) {
-        var modifierToken = expectToken(input, tokens, states, Part.TOKEN_ASTERISK, Part.TOKEN_OTHER_MODIFIER);
+        var modifierToken = expectToken(input, tokens, states, Part.TOKEN_ASTERISK);
+        if (modifierToken.isEmpty()) {
+            modifierToken = expectToken(input, tokens, states, Part.TOKEN_OTHER_MODIFIER);
+        }
         return !modifierToken.isEmpty() ? modifierToken.charAt(0) : Part.MODIFIER_NONE;
     }
 
     private static String expectText(String input, int[] tokens, int[] states) {
         var builder = new StringBuilder();
         while (true) {
-            var charToken = expectToken(input, tokens, states, Part.TOKEN_CHAR, Part.TOKEN_ESCAPED_CHAR);
+            var charToken = expectToken(input, tokens, states, Part.TOKEN_CHAR);
+            if (charToken.isEmpty()) {
+                charToken = expectToken(input, tokens, states, Part.TOKEN_ESCAPED_CHAR);
+            }
             if (charToken.isEmpty()) {
                 return builder.toString();
             }
@@ -1594,17 +1618,15 @@ public final class URLPattern {
         }
     }
 
-    private static String expectToken(String input, int[] tokens, int[] states, int... tokenTypes) {
+    private static String expectToken(String input, int[] tokens, int[] states, int tokenType) {
         var tokenIndex = states[Part.STATE_TOKEN_INDEX];
         var token = tokens[tokenIndex];
-        for (var tokenType : tokenTypes) {
-            if ((token & Part.TOKEN_MASK) == tokenType) {
-                var oldCursor = states[Part.STATE_CURSOR];
-                var cursor = oldCursor + token & Part.STEP_MASK;
-                states[Part.STATE_CURSOR] = cursor;
-                states[Part.STATE_TOKEN_INDEX] = tokenIndex + 1;
-                return input.substring(oldCursor, cursor);
-            }
+        if ((token & Part.TOKEN_MASK) == tokenType) {
+            var oldCursor = states[Part.STATE_CURSOR];
+            var cursor = oldCursor + token & Part.STEP_MASK;
+            states[Part.STATE_CURSOR] = cursor;
+            states[Part.STATE_TOKEN_INDEX] = tokenIndex + 1;
+            return input.substring(oldCursor, cursor);
         }
         return "";
     }
