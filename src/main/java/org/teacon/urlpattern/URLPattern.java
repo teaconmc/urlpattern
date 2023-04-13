@@ -45,7 +45,7 @@ public final class URLPattern {
      * URLPattern API standard (chapter 1)</a>
      */
     public URLPattern(@Nonnull String patternString) {
-        this(processInit(patternString), DEFAULT_OPTIONS);
+        this(processInit(patternString), new Options());
     }
 
     /**
@@ -58,7 +58,7 @@ public final class URLPattern {
      * URLPattern API standard (chapter 1)</a>
      */
     public URLPattern(@Nonnull Map<? super ComponentType, String> input) {
-        this(processInit(input, false), DEFAULT_OPTIONS);
+        this(processInit(input, false), new Options());
     }
 
     /**
@@ -73,7 +73,7 @@ public final class URLPattern {
      * URLPattern API standard (chapter 1)</a>
      */
     public URLPattern(@Nonnull String patternString, @Nonnull String baseUrl) {
-        this(processInit(patternString, baseUrl, DEFAULT_OPTIONS), DEFAULT_OPTIONS);
+        this(processInit(patternString, baseUrl, new Options()), new Options());
     }
 
     /**
@@ -88,7 +88,7 @@ public final class URLPattern {
      * URLPattern API standard (chapter 1)</a>
      */
     public URLPattern(@Nonnull String patternString, @Nonnull java.net.URI baseUrl) {
-        this(processInit(patternString, baseUrl.toString(), DEFAULT_OPTIONS), DEFAULT_OPTIONS);
+        this(processInit(patternString, baseUrl.toString(), new Options()), new Options());
     }
 
     /**
@@ -103,7 +103,7 @@ public final class URLPattern {
      * URLPattern API standard (chapter 1)</a>
      */
     public URLPattern(@Nonnull String patternString, @Nonnull java.net.URL baseUrl) {
-        this(processInit(patternString, baseUrl.toString(), DEFAULT_OPTIONS), DEFAULT_OPTIONS);
+        this(processInit(patternString, baseUrl.toString(), new Options()), new Options());
     }
 
     /**
@@ -783,11 +783,9 @@ public final class URLPattern {
     }
 
     private static final List<String> ESCAPES;
-    private static final Options DEFAULT_OPTIONS;
     private static final Map<String, String> SPECIAL_SCHEMES;
 
     static {
-        DEFAULT_OPTIONS = new Options(false);
         SPECIAL_SCHEMES = Map.of("file", "", "ftp", "21", "http", "80", "ws", "80", "https", "443", "wss", "443");
         ESCAPES = List.of(IntStream.range(0, 256).mapToObj(i -> String.format("%%%X%X", i / 16, i % 16)).toArray(String[]::new));
     }
@@ -862,7 +860,7 @@ public final class URLPattern {
     }
 
     private static EnumMap<ComponentType, String> processInit(String patternInput) {
-        var patterns = parsePatternInput(patternInput, DEFAULT_OPTIONS.getIgnoreCase());
+        var patterns = parsePatternInput(patternInput, new Options().getIgnoreCase());
         return processInit(patterns, false);
     }
 
