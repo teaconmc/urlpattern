@@ -26,126 +26,554 @@ import java.util.stream.IntStream;
 
 /**
  * Java Implementation of <a href="https://wicg.github.io/urlpattern">URLPattern API standard</a>.
+ * <p>
+ * The URLPattern API provides a web platform primitive for matching URLs based on a convenient pattern syntax.
  *
  * @author Yanbing Zhao
+ * @see <a href="https://wicg.github.io/urlpattern">URLPattern API standard</a>
+ * @see <a href="https://github.com/pillarjs/path-to-regexp">GitHub Repository of <code>path-to-regexp</code></a>
  */
 public final class URLPattern {
+    /**
+     * Construct a {@link URLPattern} based on a URL-like pattern string and default options. The current
+     * constructor corresponds to <code>urlPattern = new URLPattern(patternString, baseURL)</code> of the
+     * specification when <code>baseURL</code> is not given.
+     *
+     * @param patternString a URL-like string containing pattern syntax for one or more components
+     * @throws IllegalArgumentException if the pattern string has an invalid format
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-urlpattern-input-options">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public URLPattern(@Nonnull String patternString) {
-        this(process(patternString), DEFAULT_OPTIONS);
+        this(processInit(patternString), DEFAULT_OPTIONS);
     }
 
+    /**
+     * Construct a {@link URLPattern} based on a component {@link Map} and default options. The current
+     * constructor corresponds to <code>urlPattern = new URLPattern(input)</code> of the specification.
+     *
+     * @param input a component {@link Map} containing pattern syntax for one or more components
+     * @throws IllegalArgumentException if the component {@link Map} contains a pattern of invalid format
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-urlpattern-input-options">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public URLPattern(@Nonnull Map<? super Component, String> input) {
-        this(process(input, false), DEFAULT_OPTIONS);
+        this(processInit(input, false), DEFAULT_OPTIONS);
     }
 
+    /**
+     * Construct a {@link URLPattern} based on a URL-like pattern string, a base URL, and default options.
+     * The current constructor corresponds to <code>urlPattern = new URLPattern(patternString, baseURL)</code>
+     * of the specification when <code>baseURL</code> is given.
+     *
+     * @param baseUrl       the base URL of the pattern string
+     * @param patternString a URL-like string containing pattern syntax for one or more components
+     * @throws IllegalArgumentException if either the pattern string or the base URL has an invalid format
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-urlpattern">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public URLPattern(@Nonnull String patternString, @Nonnull String baseUrl) {
-        this(process(patternString, baseUrl, DEFAULT_OPTIONS), DEFAULT_OPTIONS);
+        this(processInit(patternString, baseUrl, DEFAULT_OPTIONS), DEFAULT_OPTIONS);
     }
 
+    /**
+     * Construct a {@link URLPattern} based on a URL-like pattern string, a base URL, and default options.
+     * The current constructor corresponds to <code>urlPattern = new URLPattern(patternString, baseURL)</code>
+     * of the specification when <code>baseURL</code> is given.
+     *
+     * @param baseUrl       the base URL of the pattern string
+     * @param patternString a URL-like string containing pattern syntax for one or more components
+     * @throws IllegalArgumentException if either the pattern string or the base URL has an invalid format
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-urlpattern">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public URLPattern(@Nonnull String patternString, @Nonnull java.net.URI baseUrl) {
-        this(process(patternString, baseUrl.toString(), DEFAULT_OPTIONS), DEFAULT_OPTIONS);
+        this(processInit(patternString, baseUrl.toString(), DEFAULT_OPTIONS), DEFAULT_OPTIONS);
     }
 
+    /**
+     * Construct a {@link URLPattern} based on a URL-like pattern string, a base URL, and default options.
+     * The current constructor corresponds to <code>urlPattern = new URLPattern(patternString, baseURL)</code>
+     * of the specification when <code>baseURL</code> is given.
+     *
+     * @param baseUrl       the base URL of the pattern string
+     * @param patternString a URL-like string containing pattern syntax for one or more components
+     * @throws IllegalArgumentException if either the pattern string or the base URL has an invalid format
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-urlpattern">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public URLPattern(@Nonnull String patternString, @Nonnull java.net.URL baseUrl) {
-        this(process(patternString, baseUrl.toString(), DEFAULT_OPTIONS), DEFAULT_OPTIONS);
+        this(processInit(patternString, baseUrl.toString(), DEFAULT_OPTIONS), DEFAULT_OPTIONS);
     }
 
+    /**
+     * Construct a {@link URLPattern} based on a component {@link Map} and given options. This constructor
+     * corresponds to <code>urlPattern = new URLPattern(input, options)</code> of the specification.
+     *
+     * @param input   a component {@link Map} containing pattern syntax for one or more components
+     * @param options an object containing the additional configuration options that can affect match results
+     * @throws IllegalArgumentException if the component {@link Map} contains a pattern of invalid format
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-urlpattern-input-options">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public URLPattern(@Nonnull Map<? super Component, String> input, @Nonnull Options options) {
-        this(process(input, false), options);
+        this(processInit(input, false), options);
     }
 
+    /**
+     * Construct a {@link URLPattern} based on a URL-like pattern string, a base URL, and given options. This
+     * constructor corresponds to <code>urlPattern = new URLPattern(patternString, baseURL, options)</code>
+     * of the specification.
+     *
+     * @param baseUrl       the base URL of the pattern string
+     * @param patternString a URL-like string containing pattern syntax for one or more components
+     * @param options       an object containing the additional configuration options that can affect match results
+     * @throws IllegalArgumentException if either the pattern string or the base URL has an invalid format
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-urlpattern">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public URLPattern(@Nonnull String patternString, String baseUrl, @Nonnull Options options) {
-        this(process(patternString, baseUrl, options), options);
+        this(processInit(patternString, baseUrl, options), options);
     }
 
+    /**
+     * Construct a {@link URLPattern} based on a URL-like pattern string, a base URL, and given options. This
+     * constructor corresponds to <code>urlPattern = new URLPattern(patternString, baseURL, options)</code>
+     * of the specification.
+     *
+     * @param baseUrl       the base URL of the pattern string
+     * @param patternString a URL-like string containing pattern syntax for one or more components
+     * @param options       an object containing the additional configuration options that can affect match results
+     * @throws IllegalArgumentException if either the pattern string or the base URL has an invalid format
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-urlpattern">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public URLPattern(@Nonnull String patternString, @Nonnull java.net.URI baseUrl, @Nonnull Options options) {
-        this(process(patternString, baseUrl.toString(), options), options);
+        this(processInit(patternString, baseUrl.toString(), options), options);
     }
 
+    /**
+     * Construct a {@link URLPattern} based on a URL-like pattern string, a base URL, and given options. This
+     * constructor corresponds to <code>urlPattern = new URLPattern(patternString, baseURL, options)</code>
+     * of the specification.
+     *
+     * @param baseUrl       the base URL of the pattern string
+     * @param patternString a URL-like string containing pattern syntax for one or more components
+     * @param options       an object containing the additional configuration options that can affect match results
+     * @throws IllegalArgumentException if either the pattern string or the base URL has an invalid format
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-urlpattern">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public URLPattern(@Nonnull String patternString, @Nonnull java.net.URL baseUrl, @Nonnull Options options) {
-        this(process(patternString, baseUrl.toString(), options), options);
+        this(processInit(patternString, baseUrl.toString(), options), options);
     }
 
+    /**
+     * Return the pattern string for matching the {@link Component#PROTOCOL}.
+     *
+     * @return a pattern string
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-protocol">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public @Nonnull Pattern getProtocol() {
-        return this.protocol;
+        return this.protocol.regexp;
     }
 
+    /**
+     * Return the pattern string for matching the {@link Component#USERNAME}.
+     *
+     * @return a pattern string
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-username">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public @Nonnull Pattern getUsername() {
-        return this.username;
+        return this.username.regexp;
     }
 
+    /**
+     * Return the pattern string for matching the {@link Component#PASSWORD}.
+     *
+     * @return a pattern string
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-password">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public @Nonnull Pattern getPassword() {
-        return this.password;
+        return this.password.regexp;
     }
 
+    /**
+     * Return the pattern string for matching the {@link Component#HOSTNAME}.
+     *
+     * @return a pattern string
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-hostname">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public @Nonnull Pattern getHostname() {
-        return this.hostname;
+        return this.hostname.regexp;
     }
 
+    /**
+     * Return the pattern string for matching the {@link Component#PORT}.
+     *
+     * @return a pattern string
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-port">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public @Nonnull Pattern getPort() {
-        return this.port;
+        return this.port.regexp;
     }
 
+    /**
+     * Return the pattern string for matching the {@link Component#PATHNAME}.
+     *
+     * @return a pattern string
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-pathname">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public @Nonnull Pattern getPathname() {
-        return this.pathname;
+        return this.pathname.regexp;
     }
 
+    /**
+     * Return the pattern string for matching the {@link Component#SEARCH}.
+     *
+     * @return a pattern string
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-search">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public @Nonnull Pattern getSearch() {
-        return this.search;
+        return this.search.regexp;
     }
 
+    /**
+     * Return the pattern string for matching the {@link Component#HASH}.
+     *
+     * @return a pattern string
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-hash">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public @Nonnull Pattern getHash() {
-        return this.hash;
+        return this.hash.regexp;
     }
 
+    /**
+     * Test if the {@link URLPattern} matches the given input string.
+     *
+     * @param input an input URL string
+     * @return <code>true</code> if it matches, <code>false</code> otherwise
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-test">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public boolean test(@Nonnull String input) {
-        try {
-            return match(this, parseUrlInput(input, "", true)).isPresent();
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
+        return this.exec(input).isPresent();
     }
 
-    public boolean test(@Nonnull String input, @Nonnull String baseUrl) {
-        try {
-            return match(this, parseUrlInput(input, baseUrl, true)).isPresent();
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
+    /**
+     * Test if the {@link URLPattern} matches the given input string.
+     *
+     * @param input an input URL string
+     * @return <code>true</code> if it matches, <code>false</code> otherwise
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-test">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public boolean test(@Nonnull java.net.URI input) {
+        return this.exec(input.toString()).isPresent();
     }
 
-    public boolean test(@Nonnull String input, @Nonnull java.net.URI baseUrl) {
-        try {
-            return match(this, parseUrlInput(input, baseUrl.toString(), true)).isPresent();
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
+    /**
+     * Test if the {@link URLPattern} matches the given input string.
+     *
+     * @param input an input URL string
+     * @return <code>true</code> if it matches, <code>false</code> otherwise
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-test">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public boolean test(@Nonnull java.net.URL input) {
+        return this.exec(input.toString()).isPresent();
     }
 
-    public boolean test(@Nonnull String input, @Nonnull java.net.URL baseUrl) {
-        try {
-            return match(this, parseUrlInput(input, baseUrl.toString(), true)).isPresent();
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
-
+    /**
+     * Test if the {@link URLPattern} matches the given component map.
+     *
+     * @param input a component map
+     * @return <code>true</code> if it matches, <code>false</code> otherwise
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-test">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public boolean test(@Nonnull Map<? super Component, String> input) {
+        return this.exec(input).isPresent();
+    }
+
+    /**
+     * Test if the {@link URLPattern} matches the given input string and base URL.
+     *
+     * @param input   an input URL string
+     * @param baseUrl the base URL string
+     * @return <code>true</code> if it matches, <code>false</code> otherwise
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-test">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public boolean test(@Nonnull String input, @Nonnull String baseUrl) {
+        return this.exec(input, baseUrl).isPresent();
+    }
+
+    /**
+     * Test if the {@link URLPattern} matches the given input string and base URL.
+     *
+     * @param input   an input URL string
+     * @param baseUrl the base URL string
+     * @return <code>true</code> if it matches, <code>false</code> otherwise
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-test">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public boolean test(@Nonnull String input, @Nonnull java.net.URI baseUrl) {
+        return this.exec(input, baseUrl.toString()).isPresent();
+    }
+
+    /**
+     * Test if the {@link URLPattern} matches the given input string and base URL.
+     *
+     * @param input   an input URL string
+     * @param baseUrl the base URL string
+     * @return <code>true</code> if it matches, <code>false</code> otherwise
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-test">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public boolean test(@Nonnull String input, @Nonnull java.net.URL baseUrl) {
+        return this.exec(input, baseUrl.toString()).isPresent();
+    }
+
+    /**
+     * Test if the {@link URLPattern} matches the given input string and base URL.
+     *
+     * @param input   an input URL string
+     * @param baseUrl the base URL string
+     * @return <code>true</code> if it matches, <code>false</code> otherwise
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-test">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public boolean test(@Nonnull java.net.URI input, @Nonnull String baseUrl) {
+        return this.exec(input.toString(), baseUrl).isPresent();
+    }
+
+    /**
+     * Test if the {@link URLPattern} matches the given input string and base URL.
+     *
+     * @param input   an input URL string
+     * @param baseUrl the base URL string
+     * @return <code>true</code> if it matches, <code>false</code> otherwise
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-test">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public boolean test(@Nonnull java.net.URL input, @Nonnull String baseUrl) {
+        return this.exec(input.toString(), baseUrl).isPresent();
+    }
+
+    /**
+     * Test if the {@link URLPattern} matches the given input string and base URL.
+     *
+     * @param input   an input URL string
+     * @param baseUrl the base URL string
+     * @return <code>true</code> if it matches, <code>false</code> otherwise
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-test">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public boolean test(@Nonnull java.net.URI input, @Nonnull java.net.URI baseUrl) {
+        return this.exec(input.toString(), baseUrl.toString()).isPresent();
+    }
+
+    /**
+     * Test if the {@link URLPattern} matches the given input string and base URL.
+     *
+     * @param input   an input URL string
+     * @param baseUrl the base URL string
+     * @return <code>true</code> if it matches, <code>false</code> otherwise
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-test">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public boolean test(@Nonnull java.net.URL input, @Nonnull java.net.URL baseUrl) {
+        return this.exec(input.toString(), baseUrl.toString()).isPresent();
+    }
+
+    /**
+     * Match the given string based on the {@link URLPattern}.
+     *
+     * @param input an input URL string
+     * @return the match result, <code>Optional.empty()</code> if the match process failed
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-exec">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public @Nonnull Optional<Result<String>> exec(@Nonnull String input) {
         try {
-            return match(this, process(input, true)).isPresent();
+            return Optional.of(match(this, parseUrlInput(input, ""), List.of(input)));
         } catch (IllegalArgumentException e) {
-            return false;
+            return Optional.empty();
         }
     }
 
+    /**
+     * Match the given string based on the {@link URLPattern}.
+     *
+     * @param input an input URL string
+     * @return the match result, <code>Optional.empty()</code> if the match process failed
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-exec">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public @Nonnull Optional<Result<String>> exec(@Nonnull java.net.URI input) {
+        return this.exec(input.toString());
+    }
+
+    /**
+     * Match the given string based on the {@link URLPattern}.
+     *
+     * @param input an input URL string
+     * @return the match result, <code>Optional.empty()</code> if the match process failed
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-exec">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public @Nonnull Optional<Result<String>> exec(@Nonnull java.net.URL input) {
+        return this.exec(input.toString());
+    }
+
+    /**
+     * Match the given component map based on the {@link URLPattern}.
+     *
+     * @param input a component map
+     * @return the match result, <code>Optional.empty()</code> if the match process failed
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-exec">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public <T extends Map<? super Component, String>> @Nonnull Optional<Result<T>> exec(@Nonnull T input) {
+        try {
+            return Optional.of(match(this, processInit(input, true), List.of(input)));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Match the given string based on the {@link URLPattern} and a base URL.
+     *
+     * @param input   an input URL string
+     * @param baseUrl the base URL string
+     * @return the match result, <code>Optional.empty()</code> if the match process failed
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-exec">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public @Nonnull Optional<Result<String>> exec(@Nonnull String input, @Nonnull String baseUrl) {
+        try {
+            return Optional.of(match(this, parseUrlInput(input, baseUrl), List.of(input, baseUrl)));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Match the given string based on the {@link URLPattern} and a base URL.
+     *
+     * @param input   an input URL string
+     * @param baseUrl the base URL string
+     * @return the match result, <code>Optional.empty()</code> if the match process failed
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-exec">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public @Nonnull Optional<Result<String>> exec(@Nonnull String input, @Nonnull java.net.URI baseUrl) {
+        return this.exec(input, baseUrl.toString());
+    }
+
+    /**
+     * Match the given string based on the {@link URLPattern} and a base URL.
+     *
+     * @param input   an input URL string
+     * @param baseUrl the base URL string
+     * @return the match result, <code>Optional.empty()</code> if the match process failed
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-exec">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public @Nonnull Optional<Result<String>> exec(@Nonnull String input, @Nonnull java.net.URL baseUrl) {
+        return this.exec(input, baseUrl.toString());
+    }
+
+    /**
+     * Match the given string based on the {@link URLPattern} and a base URL.
+     *
+     * @param input   an input URL string
+     * @param baseUrl the base URL string
+     * @return the match result, <code>Optional.empty()</code> if the match process failed
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-exec">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public @Nonnull Optional<Result<String>> exec(@Nonnull java.net.URI input, @Nonnull String baseUrl) {
+        return this.exec(input.toString(), baseUrl);
+    }
+
+    /**
+     * Match the given string based on the {@link URLPattern} and a base URL.
+     *
+     * @param input   an input URL string
+     * @param baseUrl the base URL string
+     * @return the match result, <code>Optional.empty()</code> if the match process failed
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-exec">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public @Nonnull Optional<Result<String>> exec(@Nonnull java.net.URL input, @Nonnull String baseUrl) {
+        return this.exec(input.toString(), baseUrl);
+    }
+
+    /**
+     * Match the given string based on the {@link URLPattern} and a base URL.
+     *
+     * @param input   an input URL string
+     * @param baseUrl the base URL string
+     * @return the match result, <code>Optional.empty()</code> if the match process failed
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-exec">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public @Nonnull Optional<Result<String>> exec(@Nonnull java.net.URI input, @Nonnull java.net.URI baseUrl) {
+        return this.exec(input.toString(), baseUrl.toString());
+    }
+
+    /**
+     * Match the given string based on the {@link URLPattern} and a base URL.
+     *
+     * @param input   an input URL string
+     * @param baseUrl the base URL string
+     * @return the match result, <code>Optional.empty()</code> if the match process failed
+     * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-exec">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public @Nonnull Optional<Result<String>> exec(@Nonnull java.net.URL input, @Nonnull java.net.URL baseUrl) {
+        return this.exec(input.toString(), baseUrl.toString());
+    }
+
+    /**
+     * Construct the default {@link Options} object representing configuration options
+     *
+     * @return configuration options object
+     * @see <a href="https://wicg.github.io/urlpattern/#dictdef-urlpatternoptions">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public static @Nonnull Options options() {
         return DEFAULT_OPTIONS;
     }
 
+    /**
+     * Representation of a component of a URL.
+     *
+     * @see <a href="https://url.spec.whatwg.org/#concept-url">
+     * URL standard (chapter 4, section 4.1)</a>
+     */
     public enum Component {
         PROTOCOL, USERNAME, PASSWORD, HOSTNAME, PORT, PATHNAME, SEARCH, HASH, BASE_URL
     }
 
+    /**
+     * An object representing configuration options. The specification now only introduces <code>ignoreCase</code>
+     * as an available configuration option.
+     *
+     * @see <a href="https://wicg.github.io/urlpattern/#dictdef-urlpatternoptions">
+     * URLPattern API standard (chapter 1)</a>
+     */
     public static final class Options {
         private final boolean ignoreCase;
 
@@ -160,6 +588,205 @@ public final class URLPattern {
         public Options withIgnoreCase(boolean ignoreCase) {
             return new Options(ignoreCase);
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this != o) {
+                if (o instanceof Options) {
+                    var that = (Options) o;
+                    return this.ignoreCase == that.ignoreCase;
+                }
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            return Boolean.hashCode(this.ignoreCase);
+        }
+
+        @Override
+        public String toString() {
+            return "URLPattern.Options{ignoreCase=" + this.ignoreCase + "}";
+        }
+    }
+
+    /**
+     * An object representing the match result, which is the return value of {@link #exec} methods.
+     *
+     * @see <a href="https://wicg.github.io/urlpattern/#dictdef-urlpatternresult">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public static final class Result<T> {
+        private final List<T> inputs;
+        private final ComponentResult protocol;
+        private final ComponentResult username;
+        private final ComponentResult password;
+        private final ComponentResult hostname;
+        private final ComponentResult port;
+        private final ComponentResult pathname;
+        private final ComponentResult search;
+        private final ComponentResult hash;
+
+        private Result(List<T> inputs, ComponentResult protocol, ComponentResult username,
+                       ComponentResult password, ComponentResult hostname, ComponentResult port,
+                       ComponentResult pathname, ComponentResult search, ComponentResult hash) {
+            this.inputs = List.copyOf(inputs);
+            this.protocol = protocol;
+            this.username = username;
+            this.password = password;
+            this.hostname = hostname;
+            this.port = port;
+            this.pathname = pathname;
+            this.search = search;
+            this.hash = hash;
+        }
+
+        public @Nonnull List<T> getInputs() {
+            return this.inputs;
+        }
+
+        public @Nonnull ComponentResult getProtocol() {
+            return this.protocol;
+        }
+
+        public @Nonnull ComponentResult getUsername() {
+            return this.username;
+        }
+
+        public @Nonnull ComponentResult getPassword() {
+            return this.password;
+        }
+
+        public @Nonnull ComponentResult getHostname() {
+            return this.hostname;
+        }
+
+        public @Nonnull ComponentResult getPort() {
+            return this.port;
+        }
+
+        public @Nonnull ComponentResult getPathname() {
+            return this.pathname;
+        }
+
+        public @Nonnull ComponentResult getSearch() {
+            return this.search;
+        }
+
+        public @Nonnull ComponentResult getHash() {
+            return this.hash;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this != o) {
+                if (o instanceof Result<?>) {
+                    var that = (Result<?>) o;
+                    return this.inputs.equals(that.inputs)
+                            && this.hash.equals(that.hash) && this.search.equals(that.search)
+                            && this.pathname.equals(that.pathname) && this.port.equals(that.port)
+                            && this.hostname.equals(that.hostname) && this.password.equals(that.password)
+                            && this.username.equals(that.username) && this.protocol.equals(that.protocol);
+                }
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(this.inputs,
+                    this.hash, this.search, this.pathname, this.port,
+                    this.hostname, this.password, this.username, this.protocol);
+        }
+
+        @Override
+        public String toString() {
+            return "URLPattern.Result{inputs=" + this.inputs +
+                    ", protocol=" + this.protocol + ", username=" + this.username +
+                    ", password=" + this.password + ", hostname=" + this.hostname + ", port=" + this.port +
+                    ", pathname=" + this.pathname + ", search=" + this.search + ", hash=" + this.hash + "}";
+        }
+    }
+
+    /**
+     * An object representing the match result of a URL component, which is part of
+     *
+     * @see <a href="https://wicg.github.io/urlpattern/#dictdef-urlpatternresult">
+     * URLPattern API standard (chapter 1)</a>
+     */
+    public static final class ComponentResult {
+        private final String input;
+        private final Map<String, Optional<String>> groups;
+
+        private ComponentResult(CharSequence input, Map<String, Optional<String>> groups) {
+            this.input = input.toString();
+            this.groups = Map.copyOf(groups);
+        }
+
+        public @Nonnull String getInput() {
+            return this.input;
+        }
+
+        public @Nonnull Map<String, Optional<String>> getGroups() {
+            return this.groups;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this != o) {
+                if (o instanceof ComponentResult) {
+                    var that = (ComponentResult) o;
+                    return this.groups.equals(that.groups) && this.input.equals(that.input);
+                }
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            return this.input.hashCode() ^ this.groups.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return "URLPattern.ComponentResult{input=" + this.input + ", groups=" + this.groups + "}";
+        }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this != o) {
+            if (o instanceof URLPattern) {
+                var that = (URLPattern) o;
+                return this.options.equals(that.options)
+                        && this.hash.input.equals(that.hash.input) && this.search.input.equals(that.search.input)
+                        && this.pathname.input.equals(that.pathname.input) && this.port.input.equals(that.port.input)
+                        && this.hostname.input.equals(that.hostname.input) && this.password.input.equals(that.password.input)
+                        && this.username.input.equals(that.username.input) && this.protocol.input.equals(that.protocol.input);
+            }
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.options,
+                this.hash.input, this.search.input, this.pathname.input, this.port.input,
+                this.hostname.input, this.password.input, this.username.input, this.protocol.input);
+    }
+
+    @Override
+    public String toString() {
+        return "URLPattern{protocol=" + this.protocol.input +
+                ", username=" + this.username.input + ", password=" + this.password.input +
+                ", hostname=" + this.hostname.input + ", port=" + this.port.input +
+                ", pathname=" + this.pathname.input + ", search=" + this.search.input +
+                ", hash=" + this.hash.input + ", options=" + this.options + "}";
     }
 
     private static final List<String> ESCAPES;
@@ -172,16 +799,18 @@ public final class URLPattern {
         ESCAPES = List.of(IntStream.range(0, 256).mapToObj(i -> String.format("%%%X%X", i / 16, i % 16)).toArray(String[]::new));
     }
 
-    private final Pattern protocol;
-    private final Pattern username;
-    private final Pattern password;
-    private final Pattern hostname;
-    private final Pattern port;
-    private final Pattern pathname;
-    private final Pattern search;
-    private final Pattern hash;
+    private final ComponentValue protocol;
+    private final ComponentValue username;
+    private final ComponentValue password;
+    private final ComponentValue hostname;
+    private final ComponentValue port;
+    private final ComponentValue pathname;
+    private final ComponentValue search;
+    private final ComponentValue hash;
+    private final Options options;
 
     private URLPattern(EnumMap<Component, String> processedInit, Options options) {
+        this.options = options;
         var ignoreCase = options.getIgnoreCase();
 
         var protocol = processedInit.getOrDefault(Component.PROTOCOL, "*");
@@ -189,76 +818,62 @@ public final class URLPattern {
             processedInit.replace(Component.PORT, SPECIAL_SCHEMES.get(protocol), "");
             processedInit.replace(Component.PORT, null, "");
         }
-        this.protocol = regexp(protocol, "", "", Part.ENCODING_PROTOCOL, false, new ArrayList<>());
+        this.protocol = collectComponent(protocol, "", "", Part.ENCODING_PROTOCOL, false);
 
         var username = processedInit.getOrDefault(Component.USERNAME, "*");
-        this.username = regexp(username, "", "", Part.ENCODING_USERNAME, false, new ArrayList<>());
+        this.username = collectComponent(username, "", "", Part.ENCODING_USERNAME, false);
 
         var password = processedInit.getOrDefault(Component.PASSWORD, "*");
-        this.password = regexp(password, "", "", Part.ENCODING_PASSWORD, false, new ArrayList<>());
+        this.password = collectComponent(password, "", "", Part.ENCODING_PASSWORD, false);
 
         var hostname = processedInit.getOrDefault(Component.HOSTNAME, "*");
         if (!hostname.startsWith("[") && !hostname.startsWith("\\[") && !hostname.startsWith("{[")) {
-            this.hostname = regexp(hostname, "", ".", Part.ENCODING_HOSTNAME, false, new ArrayList<>());
+            this.hostname = collectComponent(hostname, "", ".", Part.ENCODING_HOSTNAME, false);
         } else {
-            this.hostname = regexp(hostname, "", ".", Part.ENCODING_IPV6_HOSTNAME, false, new ArrayList<>());
+            this.hostname = collectComponent(hostname, "", ".", Part.ENCODING_IPV6_HOSTNAME, false);
         }
 
         var port = processedInit.getOrDefault(Component.PORT, "*");
-        this.port = regexp(port, "", "", Part.ENCODING_PORT, false, new ArrayList<>());
+        this.port = collectComponent(port, "", "", Part.ENCODING_PORT, false);
 
         var pathname = processedInit.getOrDefault(Component.PATHNAME, "*");
-        if (SPECIAL_SCHEMES.keySet().stream().anyMatch(this.protocol.asMatchPredicate())) {
-            this.pathname = regexp(pathname, "/", "/", Part.ENCODING_PATHNAME, ignoreCase, new ArrayList<>());
+        if (SPECIAL_SCHEMES.keySet().stream().anyMatch(this.protocol.regexp.asMatchPredicate())) {
+            this.pathname = collectComponent(pathname, "/", "/", Part.ENCODING_PATHNAME, ignoreCase);
         } else {
-            this.pathname = regexp(pathname, "", "", Part.ENCODING_OPAQUE_PATHNAME, ignoreCase, new ArrayList<>());
+            this.pathname = collectComponent(pathname, "", "", Part.ENCODING_OPAQUE_PATHNAME, ignoreCase);
         }
 
         var search = processedInit.getOrDefault(Component.SEARCH, "*");
-        this.search = regexp(search, "", "", Part.ENCODING_SEARCH, false, new ArrayList<>());
+        this.search = collectComponent(search, "", "", Part.ENCODING_SEARCH, false);
 
         var hash = processedInit.getOrDefault(Component.HASH, "*");
-        this.hash = regexp(hash, "", "", Part.ENCODING_HASH, false, new ArrayList<>());
+        this.hash = collectComponent(hash, "", "", Part.ENCODING_HASH, false);
     }
 
-    private static Optional<?> match(URLPattern pattern, Map<? super Component, String> input) {
-        var protocolMatcher = pattern.protocol.matcher(input.getOrDefault(Component.PROTOCOL, ""));
-        var usernameMatcher = pattern.username.matcher(input.getOrDefault(Component.USERNAME, ""));
-        if (!protocolMatcher.matches() || !usernameMatcher.matches()) {
-            return Optional.empty();
-        }
-        var passwordMatcher = pattern.password.matcher(input.getOrDefault(Component.PASSWORD, ""));
-        var hostnameMatcher = pattern.hostname.matcher(input.getOrDefault(Component.HOSTNAME, ""));
-        if (!passwordMatcher.matches() || !hostnameMatcher.matches()) {
-            return Optional.empty();
-        }
-        var portMatcher = pattern.port.matcher(input.getOrDefault(Component.PORT, ""));
-        var pathnameMatcher = pattern.pathname.matcher(input.getOrDefault(Component.PATHNAME, ""));
-        if (!portMatcher.matches() || !pathnameMatcher.matches()) {
-            return Optional.empty();
-        }
-        var searchMatcher = pattern.search.matcher(input.getOrDefault(Component.SEARCH, ""));
-        var hashMatcher = pattern.hash.matcher(input.getOrDefault(Component.HASH, ""));
-        if (!searchMatcher.matches() || !hashMatcher.matches()) {
-            return Optional.empty();
-        }
-        // TODO: generate results
-        return Optional.of("");
+    private static <T> Result<T> match(URLPattern pattern, Map<? super Component, String> input, List<T> inputs) {
+        var protocol = collectResult(input.getOrDefault(Component.PROTOCOL, ""), pattern.protocol);
+        var username = collectResult(input.getOrDefault(Component.USERNAME, ""), pattern.username);
+        var password = collectResult(input.getOrDefault(Component.PASSWORD, ""), pattern.password);
+        var hostname = collectResult(input.getOrDefault(Component.HOSTNAME, ""), pattern.hostname);
+        var port = collectResult(input.getOrDefault(Component.PORT, ""), pattern.port);
+        var pathname = collectResult(input.getOrDefault(Component.PATHNAME, ""), pattern.pathname);
+        var search = collectResult(input.getOrDefault(Component.SEARCH, ""), pattern.search);
+        var hash = collectResult(input.getOrDefault(Component.HASH, ""), pattern.hash);
+        return new Result<T>(inputs, protocol, username, password, hostname, port, pathname, search, hash);
     }
 
-    private static EnumMap<Component, String> process(String patternInput, String baseUrl, Options options) {
+    private static EnumMap<Component, String> processInit(String patternInput, String baseUrl, Options options) {
         var patterns = parsePatternInput(patternInput, options.getIgnoreCase());
         patterns.put(Component.BASE_URL, baseUrl);
-        return process(patterns, false);
+        return processInit(patterns, false);
     }
 
-    private static EnumMap<Component, String> process(String patternInput) {
+    private static EnumMap<Component, String> processInit(String patternInput) {
         var patterns = parsePatternInput(patternInput, DEFAULT_OPTIONS.getIgnoreCase());
-        return process(patterns, false);
+        return processInit(patterns, false);
     }
 
-    private static EnumMap<Component, String> process(Map<? super Component, String> dict, boolean isUrl) {
-        var baseUrlOpaquePath = "";
+    private static EnumMap<Component, String> processInit(Map<? super Component, String> input, boolean isUrl) {
         var result = new EnumMap<Component, String>(Component.class);
         if (isUrl) {
             result.put(Component.PROTOCOL, "");
@@ -270,8 +885,9 @@ public final class URLPattern {
             result.put(Component.SEARCH, "");
             result.put(Component.HASH, "");
         }
-        if (dict.containsKey(Component.BASE_URL)) {
-            var baseUrl = parseUrlInput(dict.get(Component.BASE_URL), "", isUrl);
+        var baseUrlOpaquePath = "";
+        if (input.containsKey(Component.BASE_URL)) {
+            var baseUrl = parseUrlInput(input.get(Component.BASE_URL), "");
             var baseUrlPathname = baseUrl.getOrDefault(Component.PATHNAME, "");
             var baseUrlSpecialPort = Optional.ofNullable(baseUrl.get(Component.PROTOCOL)).map(SPECIAL_SCHEMES::get);
             if (baseUrlSpecialPort.isEmpty() && !baseUrlPathname.startsWith("/")) {
@@ -282,30 +898,30 @@ public final class URLPattern {
             }
             result.putAll(baseUrl);
         }
-        if (dict.containsKey(Component.PROTOCOL)) {
-            var protocol = dict.get(Component.PROTOCOL);
+        if (input.containsKey(Component.PROTOCOL)) {
+            var protocol = input.get(Component.PROTOCOL);
             protocol = protocol.endsWith(":") ? protocol.substring(0, protocol.length() - 1) : protocol;
             result.put(Component.PROTOCOL, isUrl ? encode(protocol, Part.ENCODING_PROTOCOL) : protocol);
         }
-        if (dict.containsKey(Component.USERNAME)) {
-            var username = dict.get(Component.USERNAME);
+        if (input.containsKey(Component.USERNAME)) {
+            var username = input.get(Component.USERNAME);
             result.put(Component.USERNAME, isUrl ? encode(username, Part.ENCODING_USERNAME) : username);
         }
-        if (dict.containsKey(Component.PASSWORD)) {
-            var password = dict.get(Component.PASSWORD);
+        if (input.containsKey(Component.PASSWORD)) {
+            var password = input.get(Component.PASSWORD);
             result.put(Component.PASSWORD, isUrl ? encode(password, Part.ENCODING_PASSWORD) : password);
         }
-        if (dict.containsKey(Component.HOSTNAME)) {
-            var hostname = dict.get(Component.HOSTNAME);
+        if (input.containsKey(Component.HOSTNAME)) {
+            var hostname = input.get(Component.HOSTNAME);
             result.put(Component.HOSTNAME, isUrl ? encode(hostname, Part.ENCODING_HOSTNAME) : hostname);
         }
         var protocolPort = Optional.ofNullable(result.get(Component.PROTOCOL)).map(SPECIAL_SCHEMES::get);
-        if (dict.containsKey(Component.PORT) || protocolPort.isPresent()) {
-            var port = Optional.ofNullable(dict.get(Component.PORT)).orElseGet(protocolPort::orElseThrow);
+        if (input.containsKey(Component.PORT) || protocolPort.isPresent()) {
+            var port = input.getOrDefault(Component.PORT, protocolPort.orElse(""));
             result.put(Component.PORT, isUrl ? encode(port, Part.ENCODING_PORT) : port);
         }
-        if (dict.containsKey(Component.PATHNAME)) {
-            var pathname = dict.get(Component.PATHNAME);
+        if (input.containsKey(Component.PATHNAME)) {
+            var pathname = input.get(Component.PATHNAME);
             var isPathnameAbsolute = pathname.startsWith("/");
             if (!isUrl) {
                 isPathnameAbsolute = isPathnameAbsolute || pathname.startsWith("\\/") || pathname.startsWith("{/");
@@ -322,45 +938,56 @@ public final class URLPattern {
             }
             result.put(Component.PATHNAME, pathname);
         }
-        if (dict.containsKey(Component.SEARCH)) {
-            var search = dict.get(Component.SEARCH);
+        if (input.containsKey(Component.SEARCH)) {
+            var search = input.get(Component.SEARCH);
             result.put(Component.SEARCH, isUrl ? encode(search, Part.ENCODING_SEARCH) : search);
         }
-        if (dict.containsKey(Component.HASH)) {
-            var hash = dict.get(Component.HASH);
+        if (input.containsKey(Component.HASH)) {
+            var hash = input.get(Component.HASH);
             result.put(Component.HASH, isUrl ? encode(hash, Part.ENCODING_HASH) : hash);
         }
         return result;
     }
 
-    private static EnumMap<Component, String> parseUrlInput(String urlInput, String baseUrl, boolean isUrl) {
+    private static EnumMap<Component, String> parseUrlInput(String urlInput, String baseUrl) {
         var result = new EnumMap<Component, String>(Component.class);
+        var baseUri = (java.net.URI) null;
+        try {
+            baseUri = new java.net.URI(baseUrl);
+        } catch (java.net.URISyntaxException e) {
+            return failAlways(baseUrl, e.getIndex());
+        }
         var uri = (java.net.URI) null;
         try {
-            uri = new java.net.URI(baseUrl).resolve(new java.net.URI(urlInput));
+            uri = baseUri.resolve(new java.net.URI(urlInput));
         } catch (java.net.URISyntaxException e) {
-            return fail(urlInput, e.getIndex());
+            return failAlways(urlInput, e.getIndex());
         }
         var scheme = uri.getScheme();
         if (scheme != null) {
-            result.put(Component.PROTOCOL, appendEscape(scheme, new StringBuilder(), isUrl).toString());
+            result.put(Component.PROTOCOL, scheme);
         }
+        var username = uri.getRawAuthority() == null ? null : "";
+        var password = uri.getRawAuthority() == null ? null : "";
         var userinfo = uri.getRawUserInfo();
         if (userinfo != null) {
             var c = userinfo.indexOf(':');
             if (c >= 0) {
-                var username = appendEscape(userinfo.substring(0, c), new StringBuilder(), isUrl).toString();
-                var password = appendEscape(userinfo.substring(c + 1), new StringBuilder(), isUrl).toString();
-                result.put(Component.USERNAME, username);
-                result.put(Component.PASSWORD, password);
+                username = userinfo.substring(0, c);
+                password = userinfo.substring(c + 1);
             } else {
-                var username = appendEscape(userinfo, new StringBuilder(), isUrl).toString();
-                result.put(Component.USERNAME, username);
+                username = userinfo;
             }
+        }
+        if (username != null) {
+            result.put(Component.USERNAME, username);
+        }
+        if (password != null) {
+            result.put(Component.PASSWORD, password);
         }
         var host = uri.getHost();
         if (host != null) {
-            result.put(Component.HOSTNAME, appendEscape(host, new StringBuilder(), isUrl).toString());
+            result.put(Component.HOSTNAME, host);
         }
         var port = uri.getPort();
         if (port >= 0) {
@@ -371,38 +998,30 @@ public final class URLPattern {
             var h = path.indexOf('#');
             var s = path.indexOf('?');
             if (s >= 0 && s < h) {
-                var pathname = appendEscape(path.substring(0, s), new StringBuilder(), isUrl).toString();
-                var search = appendEscape(path.substring(s + 1, h), new StringBuilder(), isUrl).toString();
-                var hash = appendEscape(path.substring(h + 1), new StringBuilder(), isUrl).toString();
-                result.put(Component.PATHNAME, pathname);
-                result.put(Component.SEARCH, search);
-                result.put(Component.HASH, hash);
+                result.put(Component.PATHNAME, path.substring(0, s));
+                result.put(Component.SEARCH, path.substring(s + 1, h));
+                result.put(Component.HASH, path.substring(h + 1));
             } else if (h >= 0) {
-                var pathname = appendEscape(path.substring(0, h), new StringBuilder(), isUrl).toString();
-                var hash = appendEscape(path.substring(h + 1), new StringBuilder(), isUrl).toString();
-                result.put(Component.PATHNAME, pathname);
-                result.put(Component.HASH, hash);
+                result.put(Component.PATHNAME, path.substring(0, h));
+                result.put(Component.HASH, path.substring(h + 1));
             } else if (s >= 0) {
-                var pathname = appendEscape(path.substring(0, s), new StringBuilder(), isUrl).toString();
-                var search = appendEscape(path.substring(s + 1), new StringBuilder(), isUrl).toString();
-                result.put(Component.PATHNAME, pathname);
-                result.put(Component.SEARCH, search);
+                result.put(Component.PATHNAME, path.substring(0, s));
+                result.put(Component.SEARCH, path.substring(s + 1));
             } else {
-                var pathname = appendEscape(path, new StringBuilder(), isUrl).toString();
-                result.put(Component.PATHNAME, pathname);
+                result.put(Component.PATHNAME, path);
             }
         } else {
             var pathname = uri.getRawPath();
             var hash = uri.getRawFragment();
             var search = uri.getRawQuery();
             if (pathname != null) {
-                result.put(Component.PATHNAME, appendEscape(pathname, new StringBuilder(), isUrl).toString());
+                result.put(Component.PATHNAME, pathname);
             }
             if (hash != null) {
-                result.put(Component.HASH, appendEscape(hash, new StringBuilder(), isUrl).toString());
+                result.put(Component.HASH, hash);
             }
             if (search != null) {
-                result.put(Component.SEARCH, appendEscape(search, new StringBuilder(), isUrl).toString());
+                result.put(Component.SEARCH, search);
             }
         }
         return result;
@@ -416,7 +1035,7 @@ public final class URLPattern {
         var states = new int[Part.STATE_URL_PARSER_SIZE];
         var componentState = -1; // -3: done, -2: authority, -1: init, 0 ~ 7: Component.ordinal()
         // tokens
-        var tokens = tokenize(patternInput, false);
+        var tokens = tokenizePattern(patternInput, false);
         // result
         var result = new EnumMap<Component, String>(Component.class);
         while (true) {
@@ -494,9 +1113,9 @@ public final class URLPattern {
                 case PROTOCOL:
                     if (isSingleChar(patternInput, tokens, states, ":")) {
                         var protocolString = collectTokens(patternInput, tokens, states, 0);
-                        var protocol = regexp(protocolString.isEmpty() ? "*" : protocolString,
-                                "", "", Part.ENCODING_PROTOCOL, ignoreCase, new ArrayList<>());
-                        var mayBeSpecial = SPECIAL_SCHEMES.keySet().stream().anyMatch(protocol.asMatchPredicate());
+                        var protocol = collectComponent(protocolString.isEmpty() ? "*" : protocolString,
+                                "", "", Part.ENCODING_PROTOCOL, ignoreCase);
+                        var mayBeSpecial = SPECIAL_SCHEMES.keySet().stream().anyMatch(protocol.regexp.asMatchPredicate());
                         var followedByDoubleSlashes = isFollowedByDoubleSlashes(patternInput, tokens, states);
                         var followedByPathname = !followedByDoubleSlashes && !mayBeSpecial;
                         result.put(Component.PROTOCOL, protocolString);
@@ -531,7 +1150,7 @@ public final class URLPattern {
                         result.put(Component.HOSTNAME, collectTokens(patternInput, tokens, states, 1));
                         componentState = Component.PORT.ordinal();
                     } else if (isSingleChar(patternInput, tokens, states, "/")) {
-                        result.put(Component.HOSTNAME, collectTokens(patternInput, tokens, states, 1));
+                        result.put(Component.HOSTNAME, collectTokens(patternInput, tokens, states, 0));
                         componentState = Component.PATHNAME.ordinal();
                     } else if (isSingleChar(patternInput, tokens, states, "?") || isAnotherSearch(tokens, states)) {
                         result.put(Component.HOSTNAME, collectTokens(patternInput, tokens, states, 1));
@@ -543,7 +1162,7 @@ public final class URLPattern {
                     break;
                 case PORT:
                     if (isSingleChar(patternInput, tokens, states, "/")) {
-                        result.put(Component.PORT, collectTokens(patternInput, tokens, states, 1));
+                        result.put(Component.PORT, collectTokens(patternInput, tokens, states, 0));
                         componentState = Component.PATHNAME.ordinal();
                     } else if (isSingleChar(patternInput, tokens, states, "?") || isAnotherSearch(tokens, states)) {
                         result.put(Component.PORT, collectTokens(patternInput, tokens, states, 1));
@@ -574,11 +1193,22 @@ public final class URLPattern {
         }
     }
 
-    private static Pattern regexp(String patternInput, String prefixString, String separateString,
-                                  int encoding, boolean ignoreCase, List<String> namesToCollect) {
+    private static ComponentResult collectResult(String input, ComponentValue componentValue) {
+        var matcher = componentValue.regexp.matcher(input);
+        failUnless(input, 0, matcher.matches());
+        var groups = new HashMap<String, Optional<String>>(matcher.groupCount());
+        for (var i = 0; i < matcher.groupCount(); ++i) {
+            groups.put(componentValue.groupNameList.get(i), Optional.ofNullable(matcher.group(i + 1)));
+        }
+        return new ComponentResult(input, groups);
+    }
+
+    private static ComponentValue collectComponent(String input, String prefixString, String separateString,
+                                                   int encoding, boolean ignoreCase) {
         var result = new StringBuilder("^");
-        var parts = parsePattern(patternInput, prefixString, separateString, encoding);
+        var namesToCollect = new ArrayList<String>();
         var segPattern = appendEscape(separateString, new StringBuilder("[^")).append("]+?").toString();
+        var parts = parsePattern(input, prefixString, segPattern, encoding);
         for (var part : parts) {
             var type = part.typeAndModifier & Part.TYPE_MASK;
             var modifier = part.typeAndModifier & Part.MODIFIER_MASK;
@@ -590,7 +1220,7 @@ public final class URLPattern {
                 appendEscape(part.value, result.append("(?:")).append(")").append((char) modifier);
                 continue;
             }
-            check(patternInput, 0, !part.name.isEmpty());
+            failUnless(input, 0, !part.name.isEmpty());
             namesToCollect.add(part.name);
             var pattern = type == Part.TYPE_SEGMENT ? segPattern : type == Part.TYPE_ASTERISK ? ".*" : part.value;
             if (part.prefix.isEmpty() && part.suffix.isEmpty()) {
@@ -630,74 +1260,73 @@ public final class URLPattern {
                         continue;
                 }
             }
-            fail(patternInput, 0);
+            failAlways(input, 0);
         }
         try {
             var flag = ignoreCase ? Pattern.UNICODE_CASE | Pattern.CASE_INSENSITIVE : Pattern.UNICODE_CASE;
-            return Pattern.compile(result.append("$").toString(), flag);
+            var pattern = Pattern.compile(result.append("$").toString(), flag);
+            return new ComponentValue(input, pattern, namesToCollect);
         } catch (PatternSyntaxException e) {
-            return fail(patternInput, e.getIndex());
+            return failAlways(result.toString(), e.getIndex());
         }
     }
 
-    private static List<Part> parsePattern(String patternInput, String prefixString,
-                                           String separateString, int encoding) {
+    private static List<Part> parsePattern(String input, String prefixString, String segToken, int encoding) {
         // states
         var pending = new StringBuilder();
         var states = new int[Part.STATE_PATTERN_PARSER_SIZE];
         // tokens
-        var tokens = tokenize(patternInput, true);
-        var segToken = appendEscape(separateString, new StringBuilder("([^")).append("]+?)").toString();
+        var tokens = tokenizePattern(input, true);
         // result
         var parts = new ArrayList<Part>();
         while (true) {
-            var charToken = expectToken(patternInput, tokens, states, Part.TOKEN_CHAR);
-            var nameToken = expectToken(patternInput, tokens, states, Part.TOKEN_NAME);
-            var patternToken = expectToken(patternInput, tokens, states, Part.TOKEN_PATTERN, Part.TOKEN_ASTERISK);
+            var charToken = expectToken(input, tokens, states, Part.TOKEN_CHAR);
+            var nameToken = expectToken(input, tokens, states, Part.TOKEN_NAME);
+            var patternToken = expectToken(input, tokens, states, Part.TOKEN_PATTERN, Part.TOKEN_ASTERISK);
             if (!nameToken.isEmpty() || !patternToken.isEmpty()) {
                 var prefix = charToken;
                 if (!prefix.equals(prefixString)) {
                     pending.append(prefix);
                     prefix = "";
                 }
-                check(patternInput, states[Part.STATE_CURSOR], appendTextToPart(parts, pending, encoding));
-                var modifier = expectModifier(patternInput, tokens, states);
-                check(patternInput, states[Part.STATE_CURSOR], appendTokenToPart(parts,
+                failUnless(input, states[Part.STATE_CURSOR], appendTextToPart(parts, pending, encoding));
+                var modifier = expectModifier(input, tokens, states);
+                failUnless(input, states[Part.STATE_CURSOR], appendTokenToPart(parts,
                         pending, states, prefix, nameToken, patternToken, "", segToken, modifier, encoding));
                 continue;
             }
             if (charToken.isEmpty()) {
-                charToken = expectToken(patternInput, tokens, states, Part.TOKEN_ESCAPED_CHAR);
+                charToken = expectToken(input, tokens, states, Part.TOKEN_ESCAPED_CHAR);
             }
             if (!charToken.isEmpty()) {
                 pending.append(charToken.charAt(0) == '\\' ? charToken.substring(1) : charToken);
                 continue;
             }
-            var openToken = expectToken(patternInput, tokens, states, Part.TOKEN_OPEN);
+            var openToken = expectToken(input, tokens, states, Part.TOKEN_OPEN);
             if (!openToken.isEmpty()) {
-                var prefix = expectText(patternInput, tokens, states);
-                nameToken = expectToken(patternInput, tokens, states, Part.TOKEN_NAME);
-                patternToken = expectToken(patternInput, tokens, states, Part.TOKEN_PATTERN, Part.TOKEN_ASTERISK);
-                var suffix = expectText(patternInput, tokens, states);
-                var closeToken = expectToken(patternInput, tokens, states, Part.TOKEN_CLOSE);
-                check(patternInput, states[Part.STATE_CURSOR], !closeToken.isEmpty());
-                var modifier = expectModifier(patternInput, tokens, states);
-                check(patternInput, states[Part.STATE_CURSOR], appendTokenToPart(parts,
+                var prefix = expectText(input, tokens, states);
+                nameToken = expectToken(input, tokens, states, Part.TOKEN_NAME);
+                patternToken = expectToken(input, tokens, states, Part.TOKEN_PATTERN, Part.TOKEN_ASTERISK);
+                var suffix = expectText(input, tokens, states);
+                var closeToken = expectToken(input, tokens, states, Part.TOKEN_CLOSE);
+                failUnless(input, states[Part.STATE_CURSOR], !closeToken.isEmpty());
+                var modifier = expectModifier(input, tokens, states);
+                failUnless(input, states[Part.STATE_CURSOR], appendTokenToPart(parts,
                         pending, states, prefix, nameToken, patternToken, suffix, segToken, modifier, encoding));
                 continue;
             }
-            check(patternInput, states[Part.STATE_CURSOR], appendTextToPart(parts, pending, encoding));
-            check(patternInput, states[Part.STATE_CURSOR], states[Part.STATE_CURSOR] == patternInput.length());
+            failUnless(input, states[Part.STATE_CURSOR], appendTextToPart(parts, pending, encoding));
+            failUnless(input, states[Part.STATE_CURSOR], states[Part.STATE_CURSOR] == input.length());
             // check duplicate names
             var names = new HashSet<String>();
             for (var part : parts) {
-                check(patternInput, patternInput.length(), part.name.isEmpty() || names.add(part.name));
+                failUnless(input, input.length(), part.name.isEmpty() || names.add(part.name));
             }
             return parts;
         }
     }
 
-    private static int[] tokenize(String input, boolean strict) {
+    private static int[] tokenizePattern(String input, boolean strict) {
         var cursorStep = 1;
         var tokenIndex = -1;
         var size = input.length();
@@ -720,24 +1349,39 @@ public final class URLPattern {
                     continue;
                 case '\\': {
                     var i = cursor + 1;
-                    check(input, cursor, size > i);
-                    var n = input.codePointAt(i);
-                    tokens[++tokenIndex] = Part.TOKEN_ESCAPED_CHAR | (cursorStep = Character.charCount(n) + 1);
+                    if (i < size) {
+                        var n = input.codePointAt(i);
+                        tokens[++tokenIndex] = Part.TOKEN_ESCAPED_CHAR | (cursorStep = Character.charCount(n) + 1);
+                    } else {
+                        failUnless(input, cursor, !strict);
+                        var n = input.codePointAt(cursor);
+                        tokens[++tokenIndex] = Part.TOKEN_INVALID_CHAR | (cursorStep = Character.charCount(n));
+                    }
                     continue;
                 }
                 case ':': {
                     var i = cursor + 1;
-                    check(input, cursor, size > i);
-                    var n = input.codePointAt(i);
-                    check(input, cursor, Character.isUnicodeIdentifierStart(n));
-                    for (i += Character.charCount(n); i < size; i += Character.charCount(n)) {
-                        n = input.codePointAt(i);
-                        if (!Character.isUnicodeIdentifierPart(n)) {
-                            break;
+                    var groupNameStart = i;
+                    while (i < size) {
+                        var n = input.codePointAt(i);
+                        if (i == groupNameStart && Character.isUnicodeIdentifierStart(n)) {
+                            i += Character.charCount(n);
+                            continue;
                         }
+                        if (i != groupNameStart && Character.isUnicodeIdentifierPart(n)) {
+                            i += Character.charCount(n);
+                            continue;
+                        }
+                        break;
                     }
-                    tokens[++tokenIndex] = Part.TOKEN_NAME | (cursorStep = i - cursor);
-                    check(input, cursor, cursorStep > 1 && (cursorStep & Part.TOKEN_MASK) == 0);
+                    if (i > cursor + 1) {
+                        tokens[++tokenIndex] = Part.TOKEN_NAME | (cursorStep = i - cursor);
+                        failUnless(input, cursor, (cursorStep & Part.TOKEN_MASK) == 0);
+                    } else {
+                        failUnless(input, cursor, !strict);
+                        var n = input.codePointAt(cursor);
+                        tokens[++tokenIndex] = Part.TOKEN_INVALID_CHAR | (cursorStep = Character.charCount(n));
+                    }
                     continue;
                 }
                 case '(':
@@ -768,9 +1412,9 @@ public final class URLPattern {
                     if (!error && depth == 0 && i > patternStart + 1) {
                         // regexp tokens start with '(' and end with ')'
                         tokens[++tokenIndex] = Part.TOKEN_PATTERN | (cursorStep = i - cursor);
-                        check(input, cursor, (cursorStep & Part.TOKEN_MASK) == 0);
+                        failUnless(input, cursor, (cursorStep & Part.TOKEN_MASK) == 0);
                     } else {
-                        check(input, cursor, !strict);
+                        failUnless(input, cursor, !strict);
                         // The specification said that all those invalid characters should be considered as one token
                         // which doesn't seem to make sense, while the implementation by pillarjs/path-to-regexp does
                         // not handle invalid characters under the lenient context. The implementation here therefore
@@ -784,7 +1428,7 @@ public final class URLPattern {
                     tokens[++tokenIndex] = Part.TOKEN_CHAR | (cursorStep = Character.charCount(n));
             }
         }
-        // end tokens is always 0x00000000
+        // end tokens are always 0x00000000
         return tokens;
     }
 
@@ -802,10 +1446,10 @@ public final class URLPattern {
         }
     }
 
-    private static String collectTokens(String urlInput, int[] tokens, int[] states, int skip) {
+    private static String collectTokens(String input, int[] tokens, int[] states, int skip) {
         var stateCursor = states[Part.STATE_CURSOR];
         var stateTokenIndex = states[Part.STATE_TOKEN_INDEX];
-        var result = urlInput.substring(states[Part.STATE_COMPONENT_START_CURSOR], stateCursor);
+        var result = input.substring(states[Part.STATE_COMPONENT_START_CURSOR], stateCursor);
         for (var i = 0; i < skip; ++i) {
             stateCursor += tokens[stateTokenIndex] & Part.STEP_MASK;
             stateTokenIndex += 1;
@@ -818,19 +1462,19 @@ public final class URLPattern {
         return result;
     }
 
-    private static boolean isFollowedByDoubleSlashes(String urlInput, int[] tokens, int[] states) {
+    private static boolean isFollowedByDoubleSlashes(String input, int[] tokens, int[] states) {
         var stateCursor = states[Part.STATE_CURSOR];
         var stateTokenIndex = states[Part.STATE_TOKEN_INDEX];
         var slashFirstCursor = stateCursor + (tokens[stateTokenIndex] & Part.STEP_MASK);
         switch (tokens[stateTokenIndex + 1]) {
             case (Part.TOKEN_CHAR | 1):
             case (Part.TOKEN_INVALID_CHAR | 1):
-                if (urlInput.charAt(slashFirstCursor) != '/') {
+                if (input.charAt(slashFirstCursor) != '/') {
                     return false;
                 }
                 break;
             case (Part.TOKEN_ESCAPED_CHAR | 2):
-                if (urlInput.charAt(slashFirstCursor + 1) != '/') {
+                if (input.charAt(slashFirstCursor + 1) != '/') {
                     return false;
                 }
                 break;
@@ -841,9 +1485,9 @@ public final class URLPattern {
         switch (tokens[stateTokenIndex + 2]) {
             case (Part.TOKEN_CHAR | 1):
             case (Part.TOKEN_INVALID_CHAR | 1):
-                return urlInput.charAt(slashSecondCursor) == '/';
+                return input.charAt(slashSecondCursor) == '/';
             case (Part.TOKEN_ESCAPED_CHAR | 2):
-                return urlInput.charAt(slashSecondCursor + 1) == '/';
+                return input.charAt(slashSecondCursor + 1) == '/';
             default:
                 return false;
         }
@@ -866,14 +1510,14 @@ public final class URLPattern {
         return false;
     }
 
-    private static boolean isSingleChar(String urlInput, int[] tokens, int[] states, String choices) {
+    private static boolean isSingleChar(String input, int[] tokens, int[] states, String choices) {
         var token = tokens[states[Part.STATE_TOKEN_INDEX]];
         switch (token) {
             case (Part.TOKEN_CHAR | 1):
             case (Part.TOKEN_INVALID_CHAR | 1):
-                return choices.indexOf(urlInput.charAt(states[Part.STATE_CURSOR])) >= 0;
+                return choices.indexOf(input.charAt(states[Part.STATE_CURSOR])) >= 0;
             case (Part.TOKEN_ESCAPED_CHAR | 2):
-                return choices.indexOf(urlInput.charAt(states[Part.STATE_CURSOR] + 1)) >= 0;
+                return choices.indexOf(input.charAt(states[Part.STATE_CURSOR] + 1)) >= 0;
             default:
                 return false;
         }
@@ -923,10 +1567,6 @@ public final class URLPattern {
         return true;
     }
 
-    private static StringBuilder appendEscape(String input, StringBuilder builder, boolean isUrl) {
-        return isUrl ? builder.append(input) : appendEscape(input, builder);
-    }
-
     private static StringBuilder appendEscape(String input, StringBuilder patternBuilder) {
         for (var i = 0; i < input.length(); ++i) {
             var c = input.charAt(i);
@@ -974,60 +1614,77 @@ public final class URLPattern {
         if (!input.isEmpty()) {
             switch (encoding) {
                 case Part.ENCODING_PROTOCOL:
-                    try {
-                        return new java.net.URI(input + "://dummy.test").getScheme();
-                    } catch (java.net.URISyntaxException e) {
-                        return fail(input, e.getIndex());
-                    }
+                    return encodeScheme(input);
                 case Part.ENCODING_USERNAME:
                 case Part.ENCODING_PASSWORD:
-                    return encode(input, " \"#<>?`{}/:;=@[^");
+                    return encodePercent(input, " \"#<>?`{}/:;=@[^");
                 case Part.ENCODING_HOSTNAME:
-                    try {
-                        return new java.net.URI(null, null, input, -1, null, null, null).getHost();
-                    } catch (java.net.URISyntaxException e) {
-                        return fail(input, e.getIndex());
-                    }
+                    return encodeHost(input, false);
                 case Part.ENCODING_IPV6_HOSTNAME:
-                    var inputLength = input.length();
-                    var builder = new StringBuilder();
-                    for (var i = 0; i < inputLength; ++i) {
-                        var c = input.charAt(i);
-                        if ("0123456789abcdef[]:".indexOf(c) >= 0) {
-                            builder.append(c);
-                        } else if ("ABCDEF".indexOf(c) >= 0) {
-                            builder.append(Character.toLowerCase(c));
-                        } else {
-                            return fail(input, i);
-                        }
-                    }
-                    return builder.toString();
+                    return encodeHost(input, true);
                 case Part.ENCODING_PORT:
-                    try {
-                        var port = Integer.parseInt(input, 10);
-                        check(input, 0, (port | 0xFFFF) == port);
-                        return Integer.toString(port, 10);
-                    } catch (NumberFormatException e) {
-                        return fail(input, 0);
-                    }
+                    return encodePort(input);
                 case Part.ENCODING_PATHNAME:
-                    if (input.startsWith("/")) {
-                        return encode(input, " \"#<>?`{}");
-                    } else {
-                        return encode("/-" + input, " \"#<>?`{}").substring(2);
-                    }
+                    return encodePath(input);
                 case Part.ENCODING_OPAQUE_PATHNAME:
-                    return encode(input, " \"#<>?`{}");
+                    return encodePercent(input, " \"#<>?`{}");
                 case Part.ENCODING_SEARCH:
-                    return encode(input, " \"#<>?'");
+                    return encodePercent(input, " \"#<>?'");
                 case Part.ENCODING_HASH:
-                    return encode(input, " \"<>`");
+                    return encodePercent(input, " \"<>`");
             }
         }
         return input;
     }
 
-    private static String encode(String input, String percentEncodedChars) {
+    private static String encodeScheme(String input) {
+        try {
+            return new java.net.URI(input + "://dummy.test").getScheme();
+        } catch (java.net.URISyntaxException e) {
+            return failAlways(input + "://dummy.test", e.getIndex());
+        }
+    }
+
+    private static String encodeHost(String input, boolean ipv6) {
+        if (ipv6) {
+            var inputLength = input.length();
+            var builder = new StringBuilder();
+            for (var i = 0; i < inputLength; ++i) {
+                var c = input.charAt(i);
+                if ("0123456789abcdef[]:".indexOf(c) >= 0) {
+                    builder.append(c);
+                } else if ("ABCDEF".indexOf(c) >= 0) {
+                    builder.append(Character.toLowerCase(c));
+                } else {
+                    return failAlways(input, i);
+                }
+            }
+            return builder.toString();
+        }
+        var host = encodePercent(input, "");
+        failUnless(input, 0, host.equals(encodePercent(host, " #/:<>?@[\\]^|")));
+        return host;
+    }
+
+    private static String encodePort(String input) {
+        try {
+            var port = Integer.parseInt(input, 10);
+            failUnless(input, 0, (port | 0xFFFF) == port);
+            return Integer.toString(port, 10);
+        } catch (NumberFormatException e) {
+            return failAlways(input, 0);
+        }
+    }
+
+    private static String encodePath(String input) {
+        if (input.startsWith("/")) {
+            return encodePercent(input, " \"#<>?`{}");
+        } else {
+            return encodePercent("/-" + input, " \"#<>?`{}").substring(2);
+        }
+    }
+
+    private static String encodePercent(String input, String percentEncodedChars) {
         var builder = new StringBuilder();
         for (var b : input.getBytes(StandardCharsets.UTF_8)) {
             if ((b - 0x20 | ~percentEncodedChars.indexOf(b)) < 0) {
@@ -1039,14 +1696,26 @@ public final class URLPattern {
         return builder.toString();
     }
 
-    private static void check(String input, int cursor, boolean cond) {
+    private static void failUnless(String input, int cursor, boolean cond) {
         if (!cond) {
             throw new IllegalArgumentException("Illegal pattern near index " + cursor + ": " + input);
         }
     }
 
-    private static <T> T fail(String input, int cursor) {
+    private static <T> T failAlways(String input, int cursor) {
         throw new IllegalArgumentException("Illegal pattern near index " + cursor + ": " + input);
+    }
+
+    private static final class ComponentValue {
+        private final String input;
+        private final Pattern regexp;
+        private final List<String> groupNameList;
+
+        private ComponentValue(String input, Pattern regexp, List<String> groupNameList) {
+            this.input = input;
+            this.regexp = regexp;
+            this.groupNameList = List.copyOf(groupNameList);
+        }
     }
 
     private static final class Part {
