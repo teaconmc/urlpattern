@@ -547,17 +547,6 @@ public final class URLPattern {
     }
 
     /**
-     * Construct the default {@link Options} object representing configuration options
-     *
-     * @return configuration options object
-     * @see <a href="https://wicg.github.io/urlpattern/#dictdef-urlpatternoptions">
-     * URLPattern API standard (chapter 1)</a>
-     */
-    public static @Nonnull Options options() {
-        return DEFAULT_OPTIONS;
-    }
-
-    /**
      * Representation of component types of a URL.
      *
      * @see <a href="https://url.spec.whatwg.org/#concept-url">
@@ -576,6 +565,10 @@ public final class URLPattern {
      */
     public static final class Options {
         private final boolean ignoreCase;
+
+        public Options() {
+            this.ignoreCase = false;
+        }
 
         private Options(boolean ignoreCase) {
             this.ignoreCase = ignoreCase;
