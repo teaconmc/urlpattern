@@ -553,7 +553,12 @@ public final class URLPattern {
      * URL standard (chapter 4, section 4.1)</a>
      */
     public enum ComponentType {
-        PROTOCOL, USERNAME, PASSWORD, HOSTNAME, PORT, PATHNAME, SEARCH, HASH, BASE_URL
+        PROTOCOL, USERNAME, PASSWORD, HOSTNAME, PORT, PATHNAME, SEARCH, HASH, BASE_URL;
+
+        @Override
+        public String toString() {
+            return "URLPattern.ComponentType." + this.name();
+        }
     }
 
     /**
