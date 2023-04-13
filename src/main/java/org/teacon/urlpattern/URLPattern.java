@@ -57,7 +57,7 @@ public final class URLPattern {
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-urlpattern-input-options">
      * URLPattern API standard (chapter 1)</a>
      */
-    public URLPattern(@Nonnull Map<? super Component, String> input) {
+    public URLPattern(@Nonnull Map<? super ComponentType, String> input) {
         this(processInit(input, false), DEFAULT_OPTIONS);
     }
 
@@ -116,7 +116,7 @@ public final class URLPattern {
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-urlpattern-input-options">
      * URLPattern API standard (chapter 1)</a>
      */
-    public URLPattern(@Nonnull Map<? super Component, String> input, @Nonnull Options options) {
+    public URLPattern(@Nonnull Map<? super ComponentType, String> input, @Nonnull Options options) {
         this(processInit(input, false), options);
     }
 
@@ -169,7 +169,7 @@ public final class URLPattern {
     }
 
     /**
-     * Return the pattern string for matching the {@link Component#PROTOCOL}.
+     * Return the pattern string for matching the {@link ComponentType#PROTOCOL}.
      *
      * @return a pattern string
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-protocol">
@@ -180,7 +180,7 @@ public final class URLPattern {
     }
 
     /**
-     * Return the pattern string for matching the {@link Component#USERNAME}.
+     * Return the pattern string for matching the {@link ComponentType#USERNAME}.
      *
      * @return a pattern string
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-username">
@@ -191,7 +191,7 @@ public final class URLPattern {
     }
 
     /**
-     * Return the pattern string for matching the {@link Component#PASSWORD}.
+     * Return the pattern string for matching the {@link ComponentType#PASSWORD}.
      *
      * @return a pattern string
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-password">
@@ -202,7 +202,7 @@ public final class URLPattern {
     }
 
     /**
-     * Return the pattern string for matching the {@link Component#HOSTNAME}.
+     * Return the pattern string for matching the {@link ComponentType#HOSTNAME}.
      *
      * @return a pattern string
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-hostname">
@@ -213,7 +213,7 @@ public final class URLPattern {
     }
 
     /**
-     * Return the pattern string for matching the {@link Component#PORT}.
+     * Return the pattern string for matching the {@link ComponentType#PORT}.
      *
      * @return a pattern string
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-port">
@@ -224,7 +224,7 @@ public final class URLPattern {
     }
 
     /**
-     * Return the pattern string for matching the {@link Component#PATHNAME}.
+     * Return the pattern string for matching the {@link ComponentType#PATHNAME}.
      *
      * @return a pattern string
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-pathname">
@@ -235,7 +235,7 @@ public final class URLPattern {
     }
 
     /**
-     * Return the pattern string for matching the {@link Component#SEARCH}.
+     * Return the pattern string for matching the {@link ComponentType#SEARCH}.
      *
      * @return a pattern string
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-search">
@@ -246,7 +246,7 @@ public final class URLPattern {
     }
 
     /**
-     * Return the pattern string for matching the {@link Component#HASH}.
+     * Return the pattern string for matching the {@link ComponentType#HASH}.
      *
      * @return a pattern string
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-hash">
@@ -300,7 +300,7 @@ public final class URLPattern {
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-test">
      * URLPattern API standard (chapter 1)</a>
      */
-    public boolean test(@Nonnull Map<? super Component, String> input) {
+    public boolean test(@Nonnull Map<? super ComponentType, String> input) {
         return this.exec(input).isPresent();
     }
 
@@ -443,7 +443,7 @@ public final class URLPattern {
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-exec">
      * URLPattern API standard (chapter 1)</a>
      */
-    public <T extends Map<? super Component, String>> @Nonnull Optional<Result<T>> exec(@Nonnull T input) {
+    public <T extends Map<? super ComponentType, String>> @Nonnull Optional<Result<T>> exec(@Nonnull T input) {
         try {
             return Optional.of(match(this, processInit(input, true), List.of(input)));
         } catch (IllegalArgumentException e) {
@@ -558,12 +558,12 @@ public final class URLPattern {
     }
 
     /**
-     * Representation of a component of a URL.
+     * Representation of component types of a URL.
      *
      * @see <a href="https://url.spec.whatwg.org/#concept-url">
      * URL standard (chapter 4, section 4.1)</a>
      */
-    public enum Component {
+    public enum ComponentType {
         PROTOCOL, USERNAME, PASSWORD, HOSTNAME, PORT, PATHNAME, SEARCH, HASH, BASE_URL
     }
 
@@ -809,87 +809,87 @@ public final class URLPattern {
     private final ComponentValue hash;
     private final Options options;
 
-    private URLPattern(EnumMap<Component, String> processedInit, Options options) {
+    private URLPattern(EnumMap<ComponentType, String> processedInit, Options options) {
         this.options = options;
         var ignoreCase = options.getIgnoreCase();
 
-        var protocol = processedInit.getOrDefault(Component.PROTOCOL, "*");
+        var protocol = processedInit.getOrDefault(ComponentType.PROTOCOL, "*");
         if (SPECIAL_SCHEMES.containsKey(protocol)) {
-            processedInit.replace(Component.PORT, SPECIAL_SCHEMES.get(protocol), "");
-            processedInit.replace(Component.PORT, null, "");
+            processedInit.replace(ComponentType.PORT, SPECIAL_SCHEMES.get(protocol), "");
+            processedInit.replace(ComponentType.PORT, null, "");
         }
         this.protocol = collectComponent(protocol, "", "", Part.ENCODING_PROTOCOL, false);
 
-        var username = processedInit.getOrDefault(Component.USERNAME, "*");
+        var username = processedInit.getOrDefault(ComponentType.USERNAME, "*");
         this.username = collectComponent(username, "", "", Part.ENCODING_USERNAME, false);
 
-        var password = processedInit.getOrDefault(Component.PASSWORD, "*");
+        var password = processedInit.getOrDefault(ComponentType.PASSWORD, "*");
         this.password = collectComponent(password, "", "", Part.ENCODING_PASSWORD, false);
 
-        var hostname = processedInit.getOrDefault(Component.HOSTNAME, "*");
+        var hostname = processedInit.getOrDefault(ComponentType.HOSTNAME, "*");
         if (!hostname.startsWith("[") && !hostname.startsWith("\\[") && !hostname.startsWith("{[")) {
             this.hostname = collectComponent(hostname, "", ".", Part.ENCODING_HOSTNAME, false);
         } else {
             this.hostname = collectComponent(hostname, "", ".", Part.ENCODING_IPV6_HOSTNAME, false);
         }
 
-        var port = processedInit.getOrDefault(Component.PORT, "*");
+        var port = processedInit.getOrDefault(ComponentType.PORT, "*");
         this.port = collectComponent(port, "", "", Part.ENCODING_PORT, false);
 
-        var pathname = processedInit.getOrDefault(Component.PATHNAME, "*");
+        var pathname = processedInit.getOrDefault(ComponentType.PATHNAME, "*");
         if (SPECIAL_SCHEMES.keySet().stream().anyMatch(this.protocol.regexp.asMatchPredicate())) {
             this.pathname = collectComponent(pathname, "/", "/", Part.ENCODING_PATHNAME, ignoreCase);
         } else {
             this.pathname = collectComponent(pathname, "", "", Part.ENCODING_OPAQUE_PATHNAME, ignoreCase);
         }
 
-        var search = processedInit.getOrDefault(Component.SEARCH, "*");
+        var search = processedInit.getOrDefault(ComponentType.SEARCH, "*");
         this.search = collectComponent(search, "", "", Part.ENCODING_SEARCH, false);
 
-        var hash = processedInit.getOrDefault(Component.HASH, "*");
+        var hash = processedInit.getOrDefault(ComponentType.HASH, "*");
         this.hash = collectComponent(hash, "", "", Part.ENCODING_HASH, false);
     }
 
-    private static <T> Result<T> match(URLPattern pattern, Map<? super Component, String> input, List<T> inputs) {
-        var protocol = collectResult(input.getOrDefault(Component.PROTOCOL, ""), pattern.protocol);
-        var username = collectResult(input.getOrDefault(Component.USERNAME, ""), pattern.username);
-        var password = collectResult(input.getOrDefault(Component.PASSWORD, ""), pattern.password);
-        var hostname = collectResult(input.getOrDefault(Component.HOSTNAME, ""), pattern.hostname);
-        var port = collectResult(input.getOrDefault(Component.PORT, ""), pattern.port);
-        var pathname = collectResult(input.getOrDefault(Component.PATHNAME, ""), pattern.pathname);
-        var search = collectResult(input.getOrDefault(Component.SEARCH, ""), pattern.search);
-        var hash = collectResult(input.getOrDefault(Component.HASH, ""), pattern.hash);
+    private static <T> Result<T> match(URLPattern pattern, Map<? super ComponentType, String> input, List<T> inputs) {
+        var protocol = collectResult(input.getOrDefault(ComponentType.PROTOCOL, ""), pattern.protocol);
+        var username = collectResult(input.getOrDefault(ComponentType.USERNAME, ""), pattern.username);
+        var password = collectResult(input.getOrDefault(ComponentType.PASSWORD, ""), pattern.password);
+        var hostname = collectResult(input.getOrDefault(ComponentType.HOSTNAME, ""), pattern.hostname);
+        var port = collectResult(input.getOrDefault(ComponentType.PORT, ""), pattern.port);
+        var pathname = collectResult(input.getOrDefault(ComponentType.PATHNAME, ""), pattern.pathname);
+        var search = collectResult(input.getOrDefault(ComponentType.SEARCH, ""), pattern.search);
+        var hash = collectResult(input.getOrDefault(ComponentType.HASH, ""), pattern.hash);
         return new Result<T>(inputs, protocol, username, password, hostname, port, pathname, search, hash);
     }
 
-    private static EnumMap<Component, String> processInit(String patternInput, String baseUrl, Options options) {
+    private static EnumMap<ComponentType, String> processInit(String patternInput, String baseUrl, Options options) {
         var patterns = parsePatternInput(patternInput, options.getIgnoreCase());
-        patterns.put(Component.BASE_URL, baseUrl);
+        patterns.put(ComponentType.BASE_URL, baseUrl);
         return processInit(patterns, false);
     }
 
-    private static EnumMap<Component, String> processInit(String patternInput) {
+    private static EnumMap<ComponentType, String> processInit(String patternInput) {
         var patterns = parsePatternInput(patternInput, DEFAULT_OPTIONS.getIgnoreCase());
         return processInit(patterns, false);
     }
 
-    private static EnumMap<Component, String> processInit(Map<? super Component, String> input, boolean isUrl) {
-        var result = new EnumMap<Component, String>(Component.class);
+    private static EnumMap<ComponentType, String> processInit(Map<? super ComponentType, String> input, boolean isUrl) {
+        var result = new EnumMap<ComponentType, String>(ComponentType.class);
         if (isUrl) {
-            result.put(Component.PROTOCOL, "");
-            result.put(Component.USERNAME, "");
-            result.put(Component.PASSWORD, "");
-            result.put(Component.HOSTNAME, "");
-            result.put(Component.PORT, "");
-            result.put(Component.PATHNAME, "");
-            result.put(Component.SEARCH, "");
-            result.put(Component.HASH, "");
+            result.put(ComponentType.PROTOCOL, "");
+            result.put(ComponentType.USERNAME, "");
+            result.put(ComponentType.PASSWORD, "");
+            result.put(ComponentType.HOSTNAME, "");
+            result.put(ComponentType.PORT, "");
+            result.put(ComponentType.PATHNAME, "");
+            result.put(ComponentType.SEARCH, "");
+            result.put(ComponentType.HASH, "");
         }
         var baseUrlOpaquePath = "";
-        if (input.containsKey(Component.BASE_URL)) {
-            var baseUrl = parseUrlInput(input.get(Component.BASE_URL), "");
-            var baseUrlPathname = baseUrl.getOrDefault(Component.PATHNAME, "");
-            var baseUrlSpecialPort = Optional.ofNullable(baseUrl.get(Component.PROTOCOL)).map(SPECIAL_SCHEMES::get);
+        if (input.containsKey(ComponentType.BASE_URL)) {
+            var baseUrl = parseUrlInput(input.get(ComponentType.BASE_URL), "");
+            var baseUrlPathname = baseUrl.getOrDefault(ComponentType.PATHNAME, "");
+            var baseUrlSpecialPort = Optional.ofNullable(baseUrl.get(ComponentType.PROTOCOL)).map(SPECIAL_SCHEMES::get);
             if (baseUrlSpecialPort.isEmpty() && !baseUrlPathname.startsWith("/")) {
                 var baseUrlLastSlash = baseUrlPathname.lastIndexOf('/');
                 if (baseUrlLastSlash >= 0) {
@@ -898,30 +898,30 @@ public final class URLPattern {
             }
             result.putAll(baseUrl);
         }
-        if (input.containsKey(Component.PROTOCOL)) {
-            var protocol = input.get(Component.PROTOCOL);
+        if (input.containsKey(ComponentType.PROTOCOL)) {
+            var protocol = input.get(ComponentType.PROTOCOL);
             protocol = protocol.endsWith(":") ? protocol.substring(0, protocol.length() - 1) : protocol;
-            result.put(Component.PROTOCOL, isUrl ? encode(protocol, Part.ENCODING_PROTOCOL) : protocol);
+            result.put(ComponentType.PROTOCOL, isUrl ? encode(protocol, Part.ENCODING_PROTOCOL) : protocol);
         }
-        if (input.containsKey(Component.USERNAME)) {
-            var username = input.get(Component.USERNAME);
-            result.put(Component.USERNAME, isUrl ? encode(username, Part.ENCODING_USERNAME) : username);
+        if (input.containsKey(ComponentType.USERNAME)) {
+            var username = input.get(ComponentType.USERNAME);
+            result.put(ComponentType.USERNAME, isUrl ? encode(username, Part.ENCODING_USERNAME) : username);
         }
-        if (input.containsKey(Component.PASSWORD)) {
-            var password = input.get(Component.PASSWORD);
-            result.put(Component.PASSWORD, isUrl ? encode(password, Part.ENCODING_PASSWORD) : password);
+        if (input.containsKey(ComponentType.PASSWORD)) {
+            var password = input.get(ComponentType.PASSWORD);
+            result.put(ComponentType.PASSWORD, isUrl ? encode(password, Part.ENCODING_PASSWORD) : password);
         }
-        if (input.containsKey(Component.HOSTNAME)) {
-            var hostname = input.get(Component.HOSTNAME);
-            result.put(Component.HOSTNAME, isUrl ? encode(hostname, Part.ENCODING_HOSTNAME) : hostname);
+        if (input.containsKey(ComponentType.HOSTNAME)) {
+            var hostname = input.get(ComponentType.HOSTNAME);
+            result.put(ComponentType.HOSTNAME, isUrl ? encode(hostname, Part.ENCODING_HOSTNAME) : hostname);
         }
-        var protocolPort = Optional.ofNullable(result.get(Component.PROTOCOL)).map(SPECIAL_SCHEMES::get);
-        if (input.containsKey(Component.PORT) || protocolPort.isPresent()) {
-            var port = input.getOrDefault(Component.PORT, protocolPort.orElse(""));
-            result.put(Component.PORT, isUrl ? encode(port, Part.ENCODING_PORT) : port);
+        var protocolPort = Optional.ofNullable(result.get(ComponentType.PROTOCOL)).map(SPECIAL_SCHEMES::get);
+        if (input.containsKey(ComponentType.PORT) || protocolPort.isPresent()) {
+            var port = input.getOrDefault(ComponentType.PORT, protocolPort.orElse(""));
+            result.put(ComponentType.PORT, isUrl ? encode(port, Part.ENCODING_PORT) : port);
         }
-        if (input.containsKey(Component.PATHNAME)) {
-            var pathname = input.get(Component.PATHNAME);
+        if (input.containsKey(ComponentType.PATHNAME)) {
+            var pathname = input.get(ComponentType.PATHNAME);
             var isPathnameAbsolute = pathname.startsWith("/");
             if (!isUrl) {
                 isPathnameAbsolute = isPathnameAbsolute || pathname.startsWith("\\/") || pathname.startsWith("{/");
@@ -930,27 +930,27 @@ public final class URLPattern {
                 pathname = baseUrlOpaquePath + pathname;
             }
             if (isUrl) {
-                if (result.get(Component.PROTOCOL).isEmpty() || protocolPort.isPresent()) {
+                if (result.get(ComponentType.PROTOCOL).isEmpty() || protocolPort.isPresent()) {
                     pathname = encode(pathname, Part.ENCODING_PATHNAME);
                 } else {
                     pathname = encode(pathname, Part.ENCODING_OPAQUE_PATHNAME);
                 }
             }
-            result.put(Component.PATHNAME, pathname);
+            result.put(ComponentType.PATHNAME, pathname);
         }
-        if (input.containsKey(Component.SEARCH)) {
-            var search = input.get(Component.SEARCH);
-            result.put(Component.SEARCH, isUrl ? encode(search, Part.ENCODING_SEARCH) : search);
+        if (input.containsKey(ComponentType.SEARCH)) {
+            var search = input.get(ComponentType.SEARCH);
+            result.put(ComponentType.SEARCH, isUrl ? encode(search, Part.ENCODING_SEARCH) : search);
         }
-        if (input.containsKey(Component.HASH)) {
-            var hash = input.get(Component.HASH);
-            result.put(Component.HASH, isUrl ? encode(hash, Part.ENCODING_HASH) : hash);
+        if (input.containsKey(ComponentType.HASH)) {
+            var hash = input.get(ComponentType.HASH);
+            result.put(ComponentType.HASH, isUrl ? encode(hash, Part.ENCODING_HASH) : hash);
         }
         return result;
     }
 
-    private static EnumMap<Component, String> parseUrlInput(String urlInput, String baseUrl) {
-        var result = new EnumMap<Component, String>(Component.class);
+    private static EnumMap<ComponentType, String> parseUrlInput(String urlInput, String baseUrl) {
+        var result = new EnumMap<ComponentType, String>(ComponentType.class);
         var baseUri = (java.net.URI) null;
         try {
             baseUri = new java.net.URI(baseUrl);
@@ -965,7 +965,7 @@ public final class URLPattern {
         }
         var scheme = uri.getScheme();
         if (scheme != null) {
-            result.put(Component.PROTOCOL, scheme);
+            result.put(ComponentType.PROTOCOL, scheme);
         }
         var username = uri.getRawAuthority() == null ? null : "";
         var password = uri.getRawAuthority() == null ? null : "";
@@ -980,54 +980,54 @@ public final class URLPattern {
             }
         }
         if (username != null) {
-            result.put(Component.USERNAME, username);
+            result.put(ComponentType.USERNAME, username);
         }
         if (password != null) {
-            result.put(Component.PASSWORD, password);
+            result.put(ComponentType.PASSWORD, password);
         }
         var host = uri.getHost();
         if (host != null) {
-            result.put(Component.HOSTNAME, host);
+            result.put(ComponentType.HOSTNAME, host);
         }
         var port = uri.getPort();
         if (port >= 0) {
-            result.put(Component.PORT, Integer.toString(port, 10));
+            result.put(ComponentType.PORT, Integer.toString(port, 10));
         }
         if (uri.isOpaque()) {
             var path = uri.getRawSchemeSpecificPart();
             var h = path.indexOf('#');
             var s = path.indexOf('?');
             if (s >= 0 && s < h) {
-                result.put(Component.PATHNAME, path.substring(0, s));
-                result.put(Component.SEARCH, path.substring(s + 1, h));
-                result.put(Component.HASH, path.substring(h + 1));
+                result.put(ComponentType.PATHNAME, path.substring(0, s));
+                result.put(ComponentType.SEARCH, path.substring(s + 1, h));
+                result.put(ComponentType.HASH, path.substring(h + 1));
             } else if (h >= 0) {
-                result.put(Component.PATHNAME, path.substring(0, h));
-                result.put(Component.HASH, path.substring(h + 1));
+                result.put(ComponentType.PATHNAME, path.substring(0, h));
+                result.put(ComponentType.HASH, path.substring(h + 1));
             } else if (s >= 0) {
-                result.put(Component.PATHNAME, path.substring(0, s));
-                result.put(Component.SEARCH, path.substring(s + 1));
+                result.put(ComponentType.PATHNAME, path.substring(0, s));
+                result.put(ComponentType.SEARCH, path.substring(s + 1));
             } else {
-                result.put(Component.PATHNAME, path);
+                result.put(ComponentType.PATHNAME, path);
             }
         } else {
             var pathname = uri.getRawPath();
             var hash = uri.getRawFragment();
             var search = uri.getRawQuery();
             if (pathname != null) {
-                result.put(Component.PATHNAME, pathname);
+                result.put(ComponentType.PATHNAME, pathname);
             }
             if (hash != null) {
-                result.put(Component.HASH, hash);
+                result.put(ComponentType.HASH, hash);
             }
             if (search != null) {
-                result.put(Component.SEARCH, search);
+                result.put(ComponentType.SEARCH, search);
             }
         }
         return result;
     }
 
-    private static EnumMap<Component, String> parsePatternInput(String patternInput, boolean ignoreCase) {
+    private static EnumMap<ComponentType, String> parsePatternInput(String patternInput, boolean ignoreCase) {
         // states
         var reachTheEnd = false;
         var groupDepthState = 0;
@@ -1037,7 +1037,7 @@ public final class URLPattern {
         // tokens
         var tokens = tokenizePattern(patternInput, false);
         // result
-        var result = new EnumMap<Component, String>(Component.class);
+        var result = new EnumMap<ComponentType, String>(ComponentType.class);
         while (true) {
             var tokenType = tokens[states[Part.STATE_TOKEN_INDEX]] & Part.TOKEN_MASK;
             reachTheEnd = tokenType == Part.TOKEN_END;
@@ -1046,28 +1046,28 @@ public final class URLPattern {
                 rewindTokens(states);
                 if (isSingleChar(patternInput, tokens, states, "?") || isAnotherSearch(tokens, states)) {
                     collectTokens(patternInput, tokens, states, 1);
-                    componentState = Component.SEARCH.ordinal();
-                    result.put(Component.HASH, "");
+                    componentState = ComponentType.SEARCH.ordinal();
+                    result.put(ComponentType.HASH, "");
                 } else if (isSingleChar(patternInput, tokens, states, "#")) {
                     collectTokens(patternInput, tokens, states, 1);
-                    componentState = Component.HASH.ordinal();
+                    componentState = ComponentType.HASH.ordinal();
                 } else {
                     collectTokens(patternInput, tokens, states, 0);
-                    componentState = Component.PATHNAME.ordinal();
-                    result.put(Component.SEARCH, "");
-                    result.put(Component.HASH, "");
+                    componentState = ComponentType.PATHNAME.ordinal();
+                    result.put(ComponentType.SEARCH, "");
+                    result.put(ComponentType.HASH, "");
                 }
                 stepTokens(tokens, states);
                 continue;
             }
             if (reachTheEnd && componentState == -2) { // authority
                 rewindTokens(states);
-                componentState = Component.HOSTNAME.ordinal();
+                componentState = ComponentType.HOSTNAME.ordinal();
                 stepTokens(tokens, states);
                 continue;
             }
             if (reachTheEnd) {
-                result.put(Component.values()[componentState], collectTokens(patternInput, tokens, states, 0));
+                result.put(ComponentType.values()[componentState], collectTokens(patternInput, tokens, states, 0));
                 /* componentState = -3; // done but not needed to assign */
                 return result;
             }
@@ -1085,15 +1085,15 @@ public final class URLPattern {
             }
             if (componentState == -1) { // init
                 if (isSingleChar(patternInput, tokens, states, ":")) {
-                    result.put(Component.HASH, "");
-                    result.put(Component.SEARCH, "");
-                    result.put(Component.PATHNAME, "");
-                    result.put(Component.PORT, "");
-                    result.put(Component.HOSTNAME, "");
-                    result.put(Component.PASSWORD, "");
-                    result.put(Component.USERNAME, "");
+                    result.put(ComponentType.HASH, "");
+                    result.put(ComponentType.SEARCH, "");
+                    result.put(ComponentType.PATHNAME, "");
+                    result.put(ComponentType.PORT, "");
+                    result.put(ComponentType.HOSTNAME, "");
+                    result.put(ComponentType.PASSWORD, "");
+                    result.put(ComponentType.USERNAME, "");
                     rewindTokens(states);
-                    componentState = Component.PROTOCOL.ordinal();
+                    componentState = ComponentType.PROTOCOL.ordinal();
                 }
                 stepTokens(tokens, states);
                 continue;
@@ -1101,15 +1101,15 @@ public final class URLPattern {
             if (componentState == -2) { // authority
                 if (isSingleChar(patternInput, tokens, states, "@")) {
                     rewindTokens(states);
-                    componentState = Component.USERNAME.ordinal();
+                    componentState = ComponentType.USERNAME.ordinal();
                 } else if (isSingleChar(patternInput, tokens, states, "/?#") || isAnotherSearch(tokens, states)) {
                     rewindTokens(states);
-                    componentState = Component.HOSTNAME.ordinal();
+                    componentState = ComponentType.HOSTNAME.ordinal();
                 }
                 stepTokens(tokens, states);
                 continue;
             }
-            switch (Component.values()[componentState]) {
+            switch (ComponentType.values()[componentState]) {
                 case PROTOCOL:
                     if (isSingleChar(patternInput, tokens, states, ":")) {
                         var protocolString = collectTokens(patternInput, tokens, states, 0);
@@ -1118,27 +1118,27 @@ public final class URLPattern {
                         var mayBeSpecial = SPECIAL_SCHEMES.keySet().stream().anyMatch(protocol.regexp.asMatchPredicate());
                         var followedByDoubleSlashes = isFollowedByDoubleSlashes(patternInput, tokens, states);
                         var followedByPathname = !followedByDoubleSlashes && !mayBeSpecial;
-                        result.put(Component.PROTOCOL, protocolString);
+                        result.put(ComponentType.PROTOCOL, protocolString);
                         if (mayBeSpecial) {
-                            result.put(Component.PATHNAME, "/");
+                            result.put(ComponentType.PATHNAME, "/");
                         }
                         collectTokens(patternInput, tokens, states, followedByDoubleSlashes ? 3 : 1);
-                        componentState = followedByPathname ? Component.PATHNAME.ordinal() : -2; // authority
+                        componentState = followedByPathname ? ComponentType.PATHNAME.ordinal() : -2; // authority
                     }
                     break;
                 case USERNAME:
                     if (isSingleChar(patternInput, tokens, states, ":")) {
-                        result.put(Component.USERNAME, collectTokens(patternInput, tokens, states, 1));
-                        componentState = Component.USERNAME.ordinal();
+                        result.put(ComponentType.USERNAME, collectTokens(patternInput, tokens, states, 1));
+                        componentState = ComponentType.USERNAME.ordinal();
                     } else if (isSingleChar(patternInput, tokens, states, "@")) {
-                        result.put(Component.USERNAME, collectTokens(patternInput, tokens, states, 1));
-                        componentState = Component.HOSTNAME.ordinal();
+                        result.put(ComponentType.USERNAME, collectTokens(patternInput, tokens, states, 1));
+                        componentState = ComponentType.HOSTNAME.ordinal();
                     }
                     break;
                 case PASSWORD:
                     if (isSingleChar(patternInput, tokens, states, "@")) {
-                        result.put(Component.PASSWORD, collectTokens(patternInput, tokens, states, 1));
-                        componentState = Component.HOSTNAME.ordinal();
+                        result.put(ComponentType.PASSWORD, collectTokens(patternInput, tokens, states, 1));
+                        componentState = ComponentType.HOSTNAME.ordinal();
                     }
                     break;
                 case HOSTNAME:
@@ -1147,44 +1147,44 @@ public final class URLPattern {
                     } else if (isSingleChar(patternInput, tokens, states, "]")) {
                         ipv6HostnameDepthState -= 1;
                     } else if (isSingleChar(patternInput, tokens, states, ":") && ipv6HostnameDepthState == 0) {
-                        result.put(Component.HOSTNAME, collectTokens(patternInput, tokens, states, 1));
-                        componentState = Component.PORT.ordinal();
+                        result.put(ComponentType.HOSTNAME, collectTokens(patternInput, tokens, states, 1));
+                        componentState = ComponentType.PORT.ordinal();
                     } else if (isSingleChar(patternInput, tokens, states, "/")) {
-                        result.put(Component.HOSTNAME, collectTokens(patternInput, tokens, states, 0));
-                        componentState = Component.PATHNAME.ordinal();
+                        result.put(ComponentType.HOSTNAME, collectTokens(patternInput, tokens, states, 0));
+                        componentState = ComponentType.PATHNAME.ordinal();
                     } else if (isSingleChar(patternInput, tokens, states, "?") || isAnotherSearch(tokens, states)) {
-                        result.put(Component.HOSTNAME, collectTokens(patternInput, tokens, states, 1));
-                        componentState = Component.SEARCH.ordinal();
+                        result.put(ComponentType.HOSTNAME, collectTokens(patternInput, tokens, states, 1));
+                        componentState = ComponentType.SEARCH.ordinal();
                     } else if (isSingleChar(patternInput, tokens, states, "#")) {
-                        result.put(Component.HOSTNAME, collectTokens(patternInput, tokens, states, 1));
-                        componentState = Component.HASH.ordinal();
+                        result.put(ComponentType.HOSTNAME, collectTokens(patternInput, tokens, states, 1));
+                        componentState = ComponentType.HASH.ordinal();
                     }
                     break;
                 case PORT:
                     if (isSingleChar(patternInput, tokens, states, "/")) {
-                        result.put(Component.PORT, collectTokens(patternInput, tokens, states, 0));
-                        componentState = Component.PATHNAME.ordinal();
+                        result.put(ComponentType.PORT, collectTokens(patternInput, tokens, states, 0));
+                        componentState = ComponentType.PATHNAME.ordinal();
                     } else if (isSingleChar(patternInput, tokens, states, "?") || isAnotherSearch(tokens, states)) {
-                        result.put(Component.PORT, collectTokens(patternInput, tokens, states, 1));
-                        componentState = Component.SEARCH.ordinal();
+                        result.put(ComponentType.PORT, collectTokens(patternInput, tokens, states, 1));
+                        componentState = ComponentType.SEARCH.ordinal();
                     } else if (isSingleChar(patternInput, tokens, states, "#")) {
-                        result.put(Component.PORT, collectTokens(patternInput, tokens, states, 1));
-                        componentState = Component.HASH.ordinal();
+                        result.put(ComponentType.PORT, collectTokens(patternInput, tokens, states, 1));
+                        componentState = ComponentType.HASH.ordinal();
                     }
                     break;
                 case PATHNAME:
                     if (isSingleChar(patternInput, tokens, states, "?") || isAnotherSearch(tokens, states)) {
-                        result.put(Component.PATHNAME, collectTokens(patternInput, tokens, states, 1));
-                        componentState = Component.SEARCH.ordinal();
+                        result.put(ComponentType.PATHNAME, collectTokens(patternInput, tokens, states, 1));
+                        componentState = ComponentType.SEARCH.ordinal();
                     } else if (isSingleChar(patternInput, tokens, states, "#")) {
-                        result.put(Component.PATHNAME, collectTokens(patternInput, tokens, states, 1));
-                        componentState = Component.HASH.ordinal();
+                        result.put(ComponentType.PATHNAME, collectTokens(patternInput, tokens, states, 1));
+                        componentState = ComponentType.HASH.ordinal();
                     }
                     break;
                 case SEARCH:
                     if (isSingleChar(patternInput, tokens, states, "#")) {
-                        result.put(Component.SEARCH, collectTokens(patternInput, tokens, states, 1));
-                        componentState = Component.HASH.ordinal();
+                        result.put(ComponentType.SEARCH, collectTokens(patternInput, tokens, states, 1));
+                        componentState = ComponentType.HASH.ordinal();
                     }
                     break;
                 // case HASH: /* do nothing */
