@@ -1203,7 +1203,10 @@ public final class URLPattern {
                                                    int encoding, boolean ignoreCase) {
         var result = new StringBuilder("^");
         var namesToCollect = new ArrayList<String>();
-        var segPattern = appendEscape(separateString, new StringBuilder("[^")).append("]+?").toString();
+        var segPattern = ".+?";
+        if (!separateString.isEmpty()) {
+            segPattern = appendEscape(separateString, new StringBuilder("[^")).append("]+?").toString();
+        }
         var parts = parsePattern(input, prefixString, segPattern, encoding);
         for (var part : parts) {
             var type = part.typeAndModifier & Part.TYPE_MASK;
@@ -1665,7 +1668,7 @@ public final class URLPattern {
     private static String encodePort(String input) {
         try {
             var port = Integer.parseInt(input, 10);
-            failUnless(input, 0, (port | 0xFFFF) == port);
+            failUnless(input, 0, (port & 0xFFFF) == port);
             return Integer.toString(port, 10);
         } catch (NumberFormatException e) {
             return failAlways(input, 0);
