@@ -19,7 +19,9 @@ package org.teacon.urlpattern;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -378,5 +380,22 @@ class URLPatternTest {
         assertTrue(new URLPattern(Map.of(URLPattern.ComponentType.PATHNAME, ":foo./")).test(Map.of(URLPattern.ComponentType.PATHNAME, "bar./")));
         assertTrue(new URLPattern(Map.of(URLPattern.ComponentType.PATHNAME, ":foo../")).test(Map.of(URLPattern.ComponentType.PATHNAME, "bar../")));
         assertTrue(new URLPattern(Map.of(URLPattern.ComponentType.PATHNAME, "/:foo\\bar")).test(Map.of(URLPattern.ComponentType.PATHNAME, "/bazbar")));
+    }
+
+    @Test
+    void testFromTypeScriptPolyfillReadMe() {
+        var pattern = new URLPattern(Map.of(URLPattern.ComponentType.PATHNAME, "/foo/:name"));
+        assertEquals("^(.*)$", pattern.getProtocol().pattern());
+        assertEquals("^(.*)$", pattern.getUsername().pattern());
+        assertEquals("^(.*)$", pattern.getPassword().pattern());
+        assertEquals("^(.*)$", pattern.getHostname().pattern());
+        assertEquals("^(.*)$", pattern.getPort().pattern());
+        assertEquals("^\\/foo(?:\\/([^\\/]+?))$", pattern.getPathname().pattern());
+        assertEquals("^(.*)$", pattern.getSearch().pattern());
+        assertEquals("^(.*)$", pattern.getHash().pattern());
+        var result = pattern.exec("https://example.com/foo/bar");
+        assertEquals(List.of("https://example.com/foo/bar"), result.orElseThrow().getInputs());
+        assertEquals("/foo/bar", result.orElseThrow().getPathname().getInput());
+        assertEquals(Map.of("name", Optional.of("bar")), result.orElseThrow().getPathname().getGroups());
     }
 }
