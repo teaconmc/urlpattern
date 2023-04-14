@@ -18,7 +18,6 @@
 package org.teacon.urlpattern;
 
 import javax.annotation.Nonnull;
-import java.net.IDN;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -1770,7 +1769,7 @@ public final class URLPattern {
             return builder.toString();
         }
         try {
-            var host = IDN.toASCII(input);
+            var host = java.net.IDN.toASCII(input);
             failUnless(input, 0, host.equals(encodePercent(host, " #/:<>?@[\\]^|", true)));
             return host;
         } catch (IllegalArgumentException e) {
@@ -1847,7 +1846,7 @@ public final class URLPattern {
                 builder.append((char) b);
             }
         }
-        return builder.toString();
+        return charsSincePercentEncoded < 0 ? failAlways(input, 0) : builder.toString();
     }
 
     private static void failUnless(String input, int cursor, boolean cond) {
