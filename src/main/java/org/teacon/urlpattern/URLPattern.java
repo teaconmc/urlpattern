@@ -175,8 +175,8 @@ public final class URLPattern {
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-protocol">
      * URLPattern API standard (chapter 1)</a>
      */
-    public @Nonnull Pattern getProtocol() {
-        return this.protocol.regexp;
+    public @Nonnull String getProtocol() {
+        return this.protocol.input;
     }
 
     /**
@@ -186,8 +186,8 @@ public final class URLPattern {
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-username">
      * URLPattern API standard (chapter 1)</a>
      */
-    public @Nonnull Pattern getUsername() {
-        return this.username.regexp;
+    public @Nonnull String getUsername() {
+        return this.username.input;
     }
 
     /**
@@ -197,8 +197,8 @@ public final class URLPattern {
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-password">
      * URLPattern API standard (chapter 1)</a>
      */
-    public @Nonnull Pattern getPassword() {
-        return this.password.regexp;
+    public @Nonnull String getPassword() {
+        return this.password.input;
     }
 
     /**
@@ -208,8 +208,8 @@ public final class URLPattern {
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-hostname">
      * URLPattern API standard (chapter 1)</a>
      */
-    public @Nonnull Pattern getHostname() {
-        return this.hostname.regexp;
+    public @Nonnull String getHostname() {
+        return this.hostname.input;
     }
 
     /**
@@ -219,8 +219,8 @@ public final class URLPattern {
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-port">
      * URLPattern API standard (chapter 1)</a>
      */
-    public @Nonnull Pattern getPort() {
-        return this.port.regexp;
+    public @Nonnull String getPort() {
+        return this.port.input;
     }
 
     /**
@@ -230,8 +230,8 @@ public final class URLPattern {
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-pathname">
      * URLPattern API standard (chapter 1)</a>
      */
-    public @Nonnull Pattern getPathname() {
-        return this.pathname.regexp;
+    public @Nonnull String getPathname() {
+        return this.pathname.input;
     }
 
     /**
@@ -241,8 +241,8 @@ public final class URLPattern {
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-search">
      * URLPattern API standard (chapter 1)</a>
      */
-    public @Nonnull Pattern getSearch() {
-        return this.search.regexp;
+    public @Nonnull String getSearch() {
+        return this.search.input;
     }
 
     /**
@@ -252,8 +252,8 @@ public final class URLPattern {
      * @see <a href="https://wicg.github.io/urlpattern/#dom-urlpattern-hash">
      * URLPattern API standard (chapter 1)</a>
      */
-    public @Nonnull Pattern getHash() {
-        return this.hash.regexp;
+    public @Nonnull String getHash() {
+        return this.hash.input;
     }
 
     /**
@@ -1300,7 +1300,9 @@ public final class URLPattern {
             if (needGrouping) {
                 inputResult.append("}");
             }
-            inputResult.append((char) part.modifier);
+            if (part.modifier != Part.MODIFIER_NONE) {
+                inputResult.append((char) part.modifier);
+            }
             if (part.emptyPrefixSuffix) {
                 switch (part.modifier) {
                     case Part.MODIFIER_NONE:

@@ -385,14 +385,15 @@ class URLPatternTest {
     @Test
     void testFromTypeScriptPolyfillReadMe() {
         var pattern = new URLPattern(Map.of(URLPattern.ComponentType.PATHNAME, "/foo/:name"));
-        assertEquals("^(.*)$", pattern.getProtocol().pattern());
-        assertEquals("^(.*)$", pattern.getUsername().pattern());
-        assertEquals("^(.*)$", pattern.getPassword().pattern());
-        assertEquals("^(.*)$", pattern.getHostname().pattern());
-        assertEquals("^(.*)$", pattern.getPort().pattern());
-        assertEquals("^\\/foo(?:\\/([^\\/]+?))$", pattern.getPathname().pattern());
-        assertEquals("^(.*)$", pattern.getSearch().pattern());
-        assertEquals("^(.*)$", pattern.getHash().pattern());
+        System.out.println(pattern);
+        assertEquals("*", pattern.getProtocol());
+        assertEquals("*", pattern.getUsername());
+        assertEquals("*", pattern.getPassword());
+        assertEquals("*", pattern.getHostname());
+        assertEquals("*", pattern.getPort());
+        assertEquals("/foo/:name", pattern.getPathname());
+        assertEquals("*", pattern.getSearch());
+        assertEquals("*", pattern.getHash());
         var result = pattern.exec("https://example.com/foo/bar");
         assertEquals(List.of("https://example.com/foo/bar"), result.orElseThrow().getInputs());
         assertEquals("/foo/bar", result.orElseThrow().getPathname().getInput());
