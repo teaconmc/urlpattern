@@ -548,7 +548,7 @@ public final class URLPattern {
     }
 
     /**
-     * Representation of component types of a URL.
+     * Representation of component types of a URL (a base URL is also allowed when constructing {@link URLPattern}s).
      *
      * @see <a href="https://url.spec.whatwg.org/#concept-url">
      * URL standard (chapter 4, section 4.1)</a>
