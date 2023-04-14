@@ -17,6 +17,6 @@ allprojects {
 }
 // Add the dependency
 dependencies {
-    implementation 'org.teacon:urlpattern:1.0.0'
+    implementation 'org.teacon:urlpattern:1.0.1'
 }
 ```
