@@ -583,7 +583,7 @@ public final class URLPattern {
             return this.ignoreCase;
         }
 
-        public Options withIgnoreCase(boolean ignoreCase) {
+        public @Nonnull Options withIgnoreCase(boolean ignoreCase) {
             return new Options(ignoreCase);
         }
 
