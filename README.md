@@ -4,6 +4,8 @@
 
 Java implementation of URLPattern API standard (https://wicg.github.io/urlpattern).
 
+This library requires Java 11 or above.
+
 ## Include Dependency
 
 ```groovy
