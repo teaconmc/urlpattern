@@ -18,6 +18,7 @@
 package org.teacon.urlpattern;
 
 import javax.annotation.Nonnull;
+import java.net.IDN;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -866,6 +867,7 @@ public final class URLPattern {
 
     private static EnumMap<ComponentType, String> processInit(String patternInput) {
         var patterns = parsePatternInput(patternInput, new Options().getIgnoreCase());
+        failUnless(patternInput, 0, patterns.containsKey(ComponentType.PROTOCOL));
         return processInit(patterns, false);
     }
 
@@ -883,26 +885,34 @@ public final class URLPattern {
         }
         var baseUrlOpaquePath = "";
         if (input.containsKey(ComponentType.BASE_URL)) {
-            var baseUrl = parseUrlInput(input.get(ComponentType.BASE_URL), "");
-            var baseUrlPathname = baseUrl.getOrDefault(ComponentType.PATHNAME, "");
-            var baseUrlSpecialPort = Optional.ofNullable(baseUrl.get(ComponentType.PROTOCOL)).map(SPECIAL_SCHEMES::get);
+            var baseUrl = input.get(ComponentType.BASE_URL);
+            var baseUrlComponents = parseUrlInput(baseUrl, "");
+            failUnless(baseUrl, 0, baseUrlComponents.containsKey(ComponentType.PROTOCOL));
+            var baseUrlProtocol = baseUrlComponents.getOrDefault(ComponentType.PROTOCOL, "");
+            var baseUrlUsername = baseUrlComponents.getOrDefault(ComponentType.USERNAME, "");
+            var baseUrlPassword = baseUrlComponents.getOrDefault(ComponentType.PASSWORD, "");
+            var baseUrlHostname = baseUrlComponents.getOrDefault(ComponentType.HOSTNAME, "");
+            var baseUrlPort = baseUrlComponents.getOrDefault(ComponentType.PORT, "");
+            var baseUrlPathname = baseUrlComponents.getOrDefault(ComponentType.PATHNAME, "");
+            var baseUrlSearch = baseUrlComponents.getOrDefault(ComponentType.SEARCH, "");
+            var baseUrlHash = baseUrlComponents.getOrDefault(ComponentType.HASH, "");
             // The specification said that the baseURL should have an opaque path, but it doesn't seem to make sense.
             // Maybe it should have been "the baseURL shouldn't have an opaque path", so the following implementation
             // checks if the baseURL has an opaque path and continue if the result is false instead of true.
-            if (baseUrlSpecialPort.isPresent() || baseUrlPathname.startsWith("/")) {
+            if (SPECIAL_SCHEMES.containsKey(baseUrlProtocol) || baseUrlPathname.startsWith("/")) {
                 var baseUrlLastSlash = baseUrlPathname.lastIndexOf('/');
                 if (baseUrlLastSlash >= 0) {
                     baseUrlOpaquePath = baseUrlPathname.substring(0, baseUrlLastSlash + 1);
                 }
             }
-            result.put(ComponentType.PROTOCOL, baseUrl.getOrDefault(ComponentType.PROTOCOL, ""));
-            result.put(ComponentType.USERNAME, baseUrl.getOrDefault(ComponentType.USERNAME, ""));
-            result.put(ComponentType.PASSWORD, baseUrl.getOrDefault(ComponentType.PASSWORD, ""));
-            result.put(ComponentType.HOSTNAME, baseUrl.getOrDefault(ComponentType.HOSTNAME, ""));
-            result.put(ComponentType.PORT, baseUrl.getOrDefault(ComponentType.PORT, ""));
-            result.put(ComponentType.PATHNAME, baseUrl.getOrDefault(ComponentType.PATHNAME, ""));
-            result.put(ComponentType.SEARCH, baseUrl.getOrDefault(ComponentType.SEARCH, ""));
-            result.put(ComponentType.HASH, baseUrl.getOrDefault(ComponentType.HASH, ""));
+            result.put(ComponentType.PROTOCOL, appendPattern(baseUrlProtocol, isUrl, new StringBuilder()).toString());
+            result.put(ComponentType.USERNAME, appendPattern(baseUrlUsername, isUrl, new StringBuilder()).toString());
+            result.put(ComponentType.PASSWORD, appendPattern(baseUrlPassword, isUrl, new StringBuilder()).toString());
+            result.put(ComponentType.HOSTNAME, appendPattern(baseUrlHostname, isUrl, new StringBuilder()).toString());
+            result.put(ComponentType.PORT, appendPattern(baseUrlPort, isUrl, new StringBuilder()).toString());
+            result.put(ComponentType.PATHNAME, appendPattern(baseUrlPathname, isUrl, new StringBuilder()).toString());
+            result.put(ComponentType.SEARCH, appendPattern(baseUrlSearch, isUrl, new StringBuilder()).toString());
+            result.put(ComponentType.HASH, appendPattern(baseUrlHash, isUrl, new StringBuilder()).toString());
         }
         if (input.containsKey(ComponentType.PROTOCOL)) {
             var protocol = input.get(ComponentType.PROTOCOL);
@@ -947,10 +957,12 @@ public final class URLPattern {
         }
         if (input.containsKey(ComponentType.SEARCH)) {
             var search = input.get(ComponentType.SEARCH);
+            search = search.startsWith("?") ? search.substring(1) : search;
             result.put(ComponentType.SEARCH, isUrl ? encode(search, Part.ENCODING_SEARCH) : search);
         }
         if (input.containsKey(ComponentType.HASH)) {
             var hash = input.get(ComponentType.HASH);
+            hash = hash.startsWith("#") ? hash.substring(1) : hash;
             result.put(ComponentType.HASH, isUrl ? encode(hash, Part.ENCODING_HASH) : hash);
         }
         return result;
@@ -1137,7 +1149,7 @@ public final class URLPattern {
                 case USERNAME:
                     if (isSingleChar(patternInput, tokens, states, ":")) {
                         result.put(ComponentType.USERNAME, collectTokens(patternInput, tokens, states, 1));
-                        componentState = ComponentType.USERNAME.ordinal();
+                        componentState = ComponentType.PASSWORD.ordinal();
                     } else if (isSingleChar(patternInput, tokens, states, "@")) {
                         result.put(ComponentType.USERNAME, collectTokens(patternInput, tokens, states, 1));
                         componentState = ComponentType.HOSTNAME.ordinal();
@@ -1213,61 +1225,117 @@ public final class URLPattern {
 
     private static ComponentValue collectComponent(String input, String prefixString, String separateString,
                                                    int encoding, boolean ignoreCase) {
-        var result = new StringBuilder("^");
-        var namesToCollect = new ArrayList<String>();
+        var names = new ArrayList<String>();
+        var inputResult = new StringBuilder();
+        var regexpResult = new StringBuilder("^");
         var segPattern = ".+?";
         if (!separateString.isEmpty()) {
-            segPattern = appendEscape(separateString, new StringBuilder("[^")).append("]+?").toString();
+            segPattern = appendRegexp(separateString, new StringBuilder("[^")).append("]+?").toString();
         }
         var parts = parsePattern(input, prefixString, segPattern, encoding);
-        for (var part : parts) {
-            var type = part.typeAndModifier & Part.TYPE_MASK;
-            var modifier = part.typeAndModifier & Part.MODIFIER_MASK;
-            if (type == Part.TYPE_TEXT) {
-                if (modifier == Part.MODIFIER_NONE) {
-                    appendEscape(part.value, result);
+        var partIterator = parts.listIterator();
+        var prevPart = (Part) null;
+        var part = (Part) null;
+        while (partIterator.hasNext()) {
+            prevPart = part;
+            part = partIterator.next();
+            if (part.type == Part.TYPE_TEXT) {
+                if (part.modifier == Part.MODIFIER_NONE) {
+                    appendRegexp(part.value, regexpResult);
+                    appendPattern(part.value, true, inputResult);
                     continue;
                 }
-                appendEscape(part.value, result.append("(?:")).append(")").append((char) modifier);
+                appendRegexp(part.value, regexpResult.append("(?:")).append(")").append((char) part.modifier);
+                appendPattern(part.value, true, inputResult.append("{")).append("}").append((char) part.modifier);
                 continue;
             }
-            failUnless(input, 0, !part.name.isEmpty());
-            namesToCollect.add(part.name);
-            var pattern = type == Part.TYPE_SEGMENT ? segPattern : type == Part.TYPE_ASTERISK ? ".*" : part.value;
-            if (part.prefix.isEmpty() && part.suffix.isEmpty()) {
-                switch (modifier) {
+            names.add(part.name);
+            var needGrouping = !part.suffix.isEmpty() || !part.prefix.isEmpty() && !part.prefix.equals(prefixString);
+            if (!needGrouping && part.customName) {
+                if (part.type == Part.TYPE_SEGMENT && part.modifier == Part.MODIFIER_NONE && partIterator.hasNext()) {
+                    var nextPart = partIterator.next();
+                    if (nextPart.emptyPrefixSuffix) {
+                        needGrouping = !nextPart.customName;
+                        if (nextPart.type == Part.TYPE_TEXT) {
+                            needGrouping = Character.isUnicodeIdentifierPart(nextPart.value.codePointAt(0));
+                        }
+                    }
+                    partIterator.previous();
+                }
+            }
+            if (!needGrouping && part.prefix.isEmpty() && prevPart != null) {
+                needGrouping = prevPart.type == Part.TYPE_TEXT && prevPart.value.endsWith(prefixString);
+            }
+            if (needGrouping) {
+                inputResult.append("{");
+            }
+            appendPattern(part.prefix, true, inputResult);
+            if (part.customName) {
+                inputResult.append(":").append(part.name);
+            }
+            var pattern = part.value;
+            switch (part.type) {
+                case Part.TYPE_PATTERN:
+                    inputResult.append("(").append(part.value).append(")");
+                    break;
+                case Part.TYPE_SEGMENT:
+                    pattern = segPattern;
+                    if (!part.customName) {
+                        inputResult.append("(").append(segPattern).append(")");
+                    } else if (!part.suffix.isEmpty() && Character.isUnicodeIdentifierPart(part.suffix.codePointAt(0))) {
+                        inputResult.append("\\");
+                    }
+                    break;
+                case Part.TYPE_ASTERISK:
+                    pattern = ".*";
+                    var appendAsterisk = !part.customName;
+                    if (appendAsterisk && prevPart != null) {
+                        if (prevPart.type != Part.TYPE_TEXT && prevPart.modifier == Part.MODIFIER_NONE) {
+                            appendAsterisk = needGrouping || !prevPart.prefix.isEmpty();
+                        }
+                    }
+                    inputResult.append(appendAsterisk ? "*" : "(.*)");
+                    break;
+            }
+            appendPattern(part.suffix, true, inputResult);
+            if (needGrouping) {
+                inputResult.append("}");
+            }
+            inputResult.append((char) part.modifier);
+            if (part.emptyPrefixSuffix) {
+                switch (part.modifier) {
                     case Part.MODIFIER_NONE:
-                        result.append("(").append(pattern).append(")");
+                        regexpResult.append("(").append(pattern).append(")");
                         continue;
                     case Part.MODIFIER_OPTIONAL:
-                        result.append("(").append(pattern).append(")?");
+                        regexpResult.append("(").append(pattern).append(")?");
                         continue;
                     case Part.MODIFIER_PLUS:
-                        result.append("((?:").append(pattern).append(")").append("+)");
+                        regexpResult.append("((?:").append(pattern).append(")").append("+)");
                         continue;
                     case Part.MODIFIER_ASTERISK:
-                        result.append("((?:").append(pattern).append(")").append("*)");
+                        regexpResult.append("((?:").append(pattern).append(")").append("*)");
                         continue;
                 }
             } else {
-                switch (modifier) {
+                switch (part.modifier) {
                     case Part.MODIFIER_NONE:
-                        appendEscape(part.prefix, result.append("(?:")).append("(").append(pattern);
-                        appendEscape(part.suffix, result.append(")")).append(")");
+                        appendRegexp(part.prefix, regexpResult.append("(?:")).append("(").append(pattern);
+                        appendRegexp(part.suffix, regexpResult.append(")")).append(")");
                         continue;
                     case Part.MODIFIER_OPTIONAL:
-                        appendEscape(part.prefix, result.append("(?:")).append("(").append(pattern);
-                        appendEscape(part.suffix, result.append(")")).append(")?");
+                        appendRegexp(part.prefix, regexpResult.append("(?:")).append("(").append(pattern);
+                        appendRegexp(part.suffix, regexpResult.append(")")).append(")?");
                         continue;
                     case Part.MODIFIER_PLUS:
-                        appendEscape(part.prefix, result.append("(?:")).append("((?:").append(pattern).append(")(?:");
-                        appendEscape(part.prefix, appendEscape(part.suffix, result)).append("(?:").append(pattern);
-                        appendEscape(part.suffix, result.append("))*)")).append(")");
+                        appendRegexp(part.prefix, regexpResult.append("(?:")).append("((?:").append(pattern).append(")(?:");
+                        appendRegexp(part.prefix, appendRegexp(part.suffix, regexpResult)).append("(?:").append(pattern);
+                        appendRegexp(part.suffix, regexpResult.append("))*)")).append(")");
                         continue;
                     case Part.MODIFIER_ASTERISK:
-                        appendEscape(part.prefix, result.append("(?:")).append("((?:").append(pattern).append(")(?:");
-                        appendEscape(part.prefix, appendEscape(part.suffix, result)).append("(?:").append(pattern);
-                        appendEscape(part.suffix, result.append("))*)")).append(")?");
+                        appendRegexp(part.prefix, regexpResult.append("(?:")).append("((?:").append(pattern).append(")(?:");
+                        appendRegexp(part.prefix, appendRegexp(part.suffix, regexpResult)).append("(?:").append(pattern);
+                        appendRegexp(part.suffix, regexpResult.append("))*)")).append(")?");
                         continue;
                 }
             }
@@ -1275,10 +1343,10 @@ public final class URLPattern {
         }
         try {
             var flag = ignoreCase ? Pattern.UNICODE_CASE | Pattern.CASE_INSENSITIVE : Pattern.UNICODE_CASE;
-            var pattern = Pattern.compile(result.append("$").toString(), flag);
-            return new ComponentValue(input, pattern, namesToCollect);
+            var pattern = Pattern.compile(regexpResult.append("$").toString(), flag);
+            return new ComponentValue(inputResult.toString(), pattern, names);
         } catch (PatternSyntaxException e) {
-            return failAlways(result.toString(), e.getIndex());
+            return failAlways(regexpResult.toString(), e.getIndex());
         }
     }
 
@@ -1542,7 +1610,8 @@ public final class URLPattern {
 
     private static boolean appendTextToPart(List<Part> parts, StringBuilder pending, int encoding) {
         if (pending.length() > 0) {
-            parts.add(new Part(Part.TYPE_TEXT, "", encode(pending.toString(), encoding), "", ""));
+            var encodedPending = encode(pending.toString(), encoding);
+            parts.add(new Part(Part.TYPE_TEXT, Part.MODIFIER_NONE, "", encodedPending, "", "", false, true));
             pending.setLength(0);
         }
         return true;
@@ -1551,7 +1620,8 @@ public final class URLPattern {
     private static boolean appendTokenToPart(List<Part> parts, StringBuilder pending, int[] states,
                                              String prefix, String nameToken, String patternToken,
                                              String suffix, String segToken, int modifier, int encoding) {
-        var fixedGrouping = nameToken.isEmpty() && patternToken.isEmpty();
+        var emptyName = nameToken.isEmpty();
+        var fixedGrouping = emptyName && patternToken.isEmpty();
         if (fixedGrouping && modifier == Part.MODIFIER_NONE) {
             pending.append(prefix);
             return true;
@@ -1559,12 +1629,14 @@ public final class URLPattern {
         if (!appendTextToPart(parts, pending, encoding)) {
             return false;
         }
+        var encodedPrefix = encode(prefix, encoding);
+        var encodedSuffix = encode(suffix, encoding);
         if (fixedGrouping) {
             if (!suffix.isEmpty()) {
                 return false;
             }
             if (!prefix.isEmpty()) {
-                parts.add(new Part(Part.TYPE_TEXT | modifier, "", encode(prefix, encoding), "", ""));
+                parts.add(new Part(Part.TYPE_TEXT, modifier, "", encodedPrefix, "", "", false, true));
             }
             return true;
         }
@@ -1579,20 +1651,35 @@ public final class URLPattern {
             patternToken = "()";
         }
         var value = patternToken.substring(1, patternToken.length() - 1);
-        var name = nameToken.isEmpty() ? String.valueOf(states[Part.STATE_NAME_INDEX]++) : nameToken.substring(1);
-        parts.add(new Part(type | modifier, name, value, encode(prefix, encoding), encode(suffix, encoding)));
+        parts.add(new Part(type, modifier,
+                emptyName ? String.valueOf(states[Part.STATE_NAME_INDEX]++) : nameToken.substring(1), value,
+                encodedPrefix, encodedSuffix, !emptyName, encodedPrefix.isEmpty() && encodedSuffix.isEmpty()));
         return true;
     }
 
-    private static StringBuilder appendEscape(String input, StringBuilder patternBuilder) {
+    private static StringBuilder appendRegexp(String input, StringBuilder builder) {
         for (var i = 0; i < input.length(); ++i) {
             var c = input.charAt(i);
             if (".+*?^${}()[]|/\\".indexOf(c) >= 0) {
-                patternBuilder.append('\\');
+                builder.append('\\');
             }
-            patternBuilder.append(c);
+            builder.append(c);
         }
-        return patternBuilder;
+        return builder;
+    }
+
+    private static StringBuilder appendPattern(String input, boolean isUrl, StringBuilder builder) {
+        if (!isUrl) {
+            return builder.append(input);
+        }
+        for (var i = 0; i < input.length(); ++i) {
+            var c = input.charAt(i);
+            if ("+*?:{}()\\".indexOf(c) >= 0) {
+                builder.append('\\');
+            }
+            builder.append(c);
+        }
+        return builder;
     }
 
     private static int expectModifier(String input, int[] tokens, int[] states) {
@@ -1638,7 +1725,7 @@ public final class URLPattern {
                     return encodeScheme(input);
                 case Part.ENCODING_USERNAME:
                 case Part.ENCODING_PASSWORD:
-                    return encodePercent(input, " \"#<>?`{}/:;=@[^");
+                    return encodePercent(input, " \"#<>?`{}/:;=@[^", false);
                 case Part.ENCODING_HOSTNAME:
                     return encodeHost(input, false);
                 case Part.ENCODING_IPV6_HOSTNAME:
@@ -1648,11 +1735,11 @@ public final class URLPattern {
                 case Part.ENCODING_PATHNAME:
                     return encodePath(input);
                 case Part.ENCODING_OPAQUE_PATHNAME:
-                    return encodePercent(input, " \"#<>?`{}");
+                    return encodePercent(input, "", false);
                 case Part.ENCODING_SEARCH:
-                    return encodePercent(input, " \"#<>?'");
+                    return encodePercent(input, " \"#<>?'", false);
                 case Part.ENCODING_HASH:
-                    return encodePercent(input, " \"<>`");
+                    return encodePercent(input, " \"<>`", false);
             }
         }
         return input;
@@ -1667,7 +1754,7 @@ public final class URLPattern {
     }
 
     private static String encodeHost(String input, boolean ipv6) {
-        if (ipv6) {
+        if (ipv6 || (input.startsWith("[") && input.endsWith("]"))) {
             var inputLength = input.length();
             var builder = new StringBuilder();
             for (var i = 0; i < inputLength; ++i) {
@@ -1682,9 +1769,13 @@ public final class URLPattern {
             }
             return builder.toString();
         }
-        var host = encodePercent(input, "");
-        failUnless(input, 0, host.equals(encodePercent(host, " #/:<>?@[\\]^|")));
-        return host;
+        try {
+            var host = IDN.toASCII(input);
+            failUnless(input, 0, host.equals(encodePercent(host, " #/:<>?@[\\]^|", true)));
+            return host;
+        } catch (IllegalArgumentException e) {
+            return failAlways(input, 0);
+        }
     }
 
     private static String encodePort(String input) {
@@ -1698,18 +1789,60 @@ public final class URLPattern {
     }
 
     private static String encodePath(String input) {
-        if (input.startsWith("/")) {
-            return encodePercent(input, " \"#<>?`{}");
-        } else {
-            return encodePercent("/-" + input, " \"#<>?`{}").substring(2);
+        var firstPart = true;
+        var builder = new StringBuilder();
+        var parts = new ArrayDeque<String>();
+        for (var i = 0; i < input.length(); ++i) {
+            char c = input.charAt(i);
+            if (c != '/') {
+                builder.append(c);
+                continue;
+            }
+            var p = builder.toString();
+            if (!firstPart) {
+                switch (p) {
+                    case "..":
+                    case ".%2e":
+                    case ".%2E":
+                    case "%2e.":
+                    case "%2E.":
+                    case "%2e%2e":
+                    case "%2e%2E":
+                    case "%2E%2e":
+                    case "%2E%2E":
+                        builder.setLength(0);
+                        parts.pollLast();
+                        continue;
+                    case ".":
+                    case "%2e":
+                    case "%2E":
+                        builder.setLength(0);
+                        continue;
+                }
+            }
+            firstPart = false;
+            builder.setLength(0);
+            parts.offerLast(encodePercent(p, " \"#<>?`{}", false));
         }
+        var f = encodePercent(builder.toString(), " \"#<>?`{}", false);
+        builder.setLength(0);
+        for (var p : parts) {
+            builder.append(p).append('/');
+        }
+        return builder.append(f).toString();
     }
 
-    private static String encodePercent(String input, String percentEncodedChars) {
+    private static String encodePercent(String input, String percentEncodedChars, boolean percentCheck) {
+        var charsSincePercentEncoded = 0;
         var builder = new StringBuilder();
         for (var b : input.getBytes(StandardCharsets.UTF_8)) {
-            if ((b - 0x20 | ~percentEncodedChars.indexOf(b)) < 0) {
+            if (++charsSincePercentEncoded <= 0 && "0123456789abcdef".indexOf(Character.toLowerCase(b)) < 0) {
+                return failAlways(input, 0);
+            } else if ((b - 0x20 | ~percentEncodedChars.indexOf(b)) < 0) {
                 builder.append(ESCAPES.get(b & 0xFF));
+            } else if (b == '%' && percentCheck) {
+                charsSincePercentEncoded = -2;
+                builder.append('%');
             } else {
                 builder.append((char) b);
             }
@@ -1740,13 +1873,11 @@ public final class URLPattern {
     }
 
     private static final class Part {
-        private static final int TYPE_MASK = 0xFF00;
         private static final int TYPE_TEXT = 0x0000;
         private static final int TYPE_PATTERN = 0x0100;
         private static final int TYPE_SEGMENT = 0x0200;
         private static final int TYPE_ASTERISK = 0x0300;
 
-        private static final int MODIFIER_MASK = 0x00FF;
         private static final int MODIFIER_NONE = '\0'; // 0x0000
         private static final int MODIFIER_OPTIONAL = '?'; // 0x003F
         private static final int MODIFIER_PLUS = '+'; // 0x002B
@@ -1786,18 +1917,25 @@ public final class URLPattern {
         private static final int ENCODING_SEARCH = 0x06;
         private static final int ENCODING_HASH = 0x07;
 
+        private final int type;
+        private final int modifier;
         private final String name;
         private final String value;
         private final String prefix;
         private final String suffix;
-        private final int typeAndModifier;
+        private final boolean customName;
+        private final boolean emptyPrefixSuffix;
 
-        private Part(int typeAndModifier, String name, String value, String prefix, String suffix) {
+        private Part(int type, int modifier, String name, String value,
+                     String prefix, String suffix, boolean customName, boolean emptyPrefixSuffix) {
+            this.type = type;
+            this.modifier = modifier;
             this.name = name;
             this.value = value;
             this.prefix = prefix;
             this.suffix = suffix;
-            this.typeAndModifier = typeAndModifier;
+            this.customName = customName;
+            this.emptyPrefixSuffix = emptyPrefixSuffix;
         }
     }
 }
